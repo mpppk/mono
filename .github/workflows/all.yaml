@@ -1,0 +1,21 @@
+name: all
+
+on: [push]
+
+jobs:
+  cli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+      - run: npm ci -w pkgs/cli
+      - run: npm test -w pkgs/cli
+  next:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+      - run: npm ci -w pkgs/next
+      # - run: npm run lint -w pkgs/next # skip: https://github.com/vercel/next.js/issues/38939
+      - run: npm run build -w pkgs/next
+      - run: npm test -w pkgs/next
