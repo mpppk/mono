@@ -22,13 +22,6 @@ const exists = <T>(node: Node<T> | NoExistNode): node is Node<T> => {
   return node.data !== null;
 };
 
-const mustExists = <T>(node: Node<T> | NoExistNode): Node<T> => {
-  if (!exists(node)) {
-    throw new Error(`Node ${node.index} not exists`);
-  }
-  return node;
-};
-
 export class Heap<T> {
   private _data: T[] = [];
   constructor(private mapper: (value: T) => number) {}
