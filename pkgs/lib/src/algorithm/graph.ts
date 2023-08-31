@@ -1,5 +1,6 @@
 import { PriorityQueue } from "./priority-queue";
 
+// eslint-disable-next-line @typescript-eslint/ban-types
 export interface NodeID extends Number {
   _nodeIDBrand: never;
 }
