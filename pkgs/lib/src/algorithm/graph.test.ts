@@ -10,9 +10,18 @@ describe("Graph", () => {
     const c = builder.addNode("c");
     dag.edges.add(a, b, 0);
     dag.edges.add(b, c, 0);
-    expect(dag.edges.get(a)).toEqual({ parent: [], children: [b] });
-    expect(dag.edges.get(b)).toEqual({ parent: [a], children: [c] });
-    expect(dag.edges.get(c)).toEqual({ parent: [b], children: [] });
+    expect(dag.edges.get(a)).toEqual({
+      parent: [],
+      children: [{ from: a, to: b, value: 0 }],
+    });
+    expect(dag.edges.get(b)).toEqual({
+      parent: [{ from: a, to: b, value: 0 }],
+      children: [{ from: b, to: c, value: 0 }],
+    });
+    expect(dag.edges.get(c)).toEqual({
+      parent: [{ from: b, to: c, value: 0 }],
+      children: [],
+    });
 
     const forest = builder.build();
     expect(forest.getDAG(index)).toEqual(dag);

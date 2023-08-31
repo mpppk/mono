@@ -1,4 +1,4 @@
-import { unreachable } from "cli/src/utils";
+import { unreachable } from "../common";
 
 type Node<T> = {
   data: T;
