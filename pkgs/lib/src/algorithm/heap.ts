@@ -119,4 +119,8 @@ export class Heap<T> {
     this.build();
     return { data: root.data, value: root.value };
   }
+
+  public size(): number {
+    return this._data.length;
+  }
 }
