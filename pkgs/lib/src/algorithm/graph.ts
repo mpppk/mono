@@ -1,14 +1,28 @@
 import { PriorityQueue } from "./priority-queue";
+import { addToSetMap, unreachable } from "../common";
 
 // eslint-disable-next-line @typescript-eslint/ban-types
 export interface NodeID extends Number {
   _nodeIDBrand: never;
 }
+const NodeID = Object.freeze({
+  new: (n: number): NodeID => n as unknown as NodeID,
+  toNumber: (id: NodeID): number => id as unknown as number,
+});
+
+// eslint-disable-next-line @typescript-eslint/ban-types
+export interface DagID extends Number {
+  _nodeIDBrand: never;
+}
+export const DagID = Object.freeze({
+  new: (n: number): DagID => n as unknown as DagID,
+  toNumber: (id: DagID): number => id as unknown as number,
+});
 
 export class Nodes<T> {
   constructor(private toHex: (n: T) => string = (n) => String(n)) {}
 
-  private nodes: Map<NodeID, T> = new Map();
+  public nodes: Map<NodeID, T> = new Map();
   private hexToIDMap: Map<string, NodeID> = new Map();
 
   private nextID = 0;
@@ -110,7 +124,7 @@ export class DAG<Node, EdgeValue> {
 export class DAGForestBuilder<Node, EdgeValue> {
   public dags: DAG<Node, EdgeValue>[] = [];
   public build(): DAGForest<Node, EdgeValue> {
-    return new DAGForest(this);
+    return new DAGForest(this.nodes, this.dags);
   }
 
   constructor(public nodes: Nodes<Node> = new Nodes()) {}
@@ -124,20 +138,77 @@ export class DAGForestBuilder<Node, EdgeValue> {
     return this.dags.length - 1;
   }
 
-  public newDAG(): { dag: DAG<Node, EdgeValue>; index: number } {
+  public newDAG(): { dag: DAG<Node, EdgeValue>; id: DagID } {
     const dag = new DAG<Node, EdgeValue>(this.nodes);
     this.addDAG(dag);
-    return { dag, index: this.dags.length - 1 };
+    return { dag, id: DagID.new(this.dags.length - 1) };
   }
 }
 
+export type FindPartialPathOp = "next" | "next-dag";
+type FindPartialPathResult = {
+  path: NodeID[];
+  dagID: DagID;
+};
+type FindPartialPathMatcher<Node, EdgeValue> = (
+  nodeID: NodeID,
+  dag: DAG<Node, EdgeValue>
+) => Generator<NodeID[], void>;
+
 export class DAGForest<Node, EdgeValue> {
-  constructor(private forest: DAGForestBuilder<Node, EdgeValue>) {}
+  private nodeDagMap: Map<NodeID, Set<DagID>> = new Map();
+  constructor(
+    private _nodes: Nodes<Node>,
+    private _dags: DAG<Node, EdgeValue>[]
+  ) {}
   get nodes(): Nodes<Node> {
-    return this.forest.nodes;
+    return this._nodes;
   }
 
-  public getDAG(id: number): DAG<Node, EdgeValue> {
-    return this.forest.dags[id];
+  public getDag(id: DagID): DAG<Node, EdgeValue> {
+    return this._dags[DagID.toNumber(id)];
+  }
+
+  public getDagByNodeID(id: NodeID): Set<DagID> {
+    return this.nodeDagMap.get(id) ?? new Set();
+  }
+
+  public addEdge(
+    dagID: DagID,
+    from: NodeID,
+    to: NodeID,
+    value: EdgeValue
+  ): void {
+    this.getDag(dagID).edges.add(from, to, value);
+    addToSetMap(this.nodeDagMap, from, dagID);
+  }
+
+  /**
+   * 全ノードから、条件にマッチする部分的なパスを返す
+   */
+  public *findPartialPath(
+    matcher: FindPartialPathMatcher<Node, EdgeValue>
+  ): Generator<FindPartialPathResult, void, FindPartialPathOp> {
+    // FIXME: nodeの取り出し順をいい感じにすると枝刈りもいい感じになるはず
+    // いずれ訪問済みのdagをskipするopが必要になるかも
+    for (const [nodeID] of this.nodes.nodes.entries()) {
+      const dagSet = this.getDagByNodeID(nodeID);
+      for (const dagID of dagSet) {
+        const dag = this.getDag(dagID);
+        for (const path of matcher(nodeID, dag)) {
+          const op = yield { path, dagID };
+          if (op === "next-dag") {
+            // switch内ではswitchからのbreakになってしまうので外でbreakする
+            break;
+          }
+          switch (op) {
+            case "next":
+              continue;
+            default:
+              unreachable(op);
+          }
+        }
+      }
+    }
   }
 }
