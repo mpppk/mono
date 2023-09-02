@@ -1,5 +1,5 @@
 import { PriorityQueue } from "./priority-queue";
-import { addToSetMap, unreachable } from "../common";
+import { addToSetMap, TwoOrMoreArray, unreachable } from "../common";
 
 // eslint-disable-next-line @typescript-eslint/ban-types
 export interface NodeID extends Number {
@@ -94,6 +94,35 @@ export type Path = Readonly<{
 export class DAG<Node, EdgeValue> {
   public edges: Edges<EdgeValue> = new Edges();
   constructor(public readonly nodes: Nodes<Node> = new Nodes()) {}
+
+  public *findWaypointPath(
+    waypoints: TwoOrMoreArray<NodeID>,
+    options: FindPathOptions<Node, EdgeValue> = defaultFindPathOptions()
+  ) {
+    if (waypoints.length < 2) {
+      throw new Error("waypoints.length must be >= 2");
+    }
+    const generators: ReturnType<typeof this.findPath>[] = [];
+    for (let i = 1; i < waypoints.length; i++) {
+      const [from, to] = [waypoints[i - 1], waypoints[i]];
+      generators.push(this.findPath(from, to, options));
+    }
+    const f = function* (generators2: typeof generators): Generator<Path> {
+      const generators3 = [...generators2];
+      const g = generators2.shift();
+      if (g === undefined) {
+        return;
+      }
+      for (const childPath of f(generators3))
+        for (const p of g) {
+          yield {
+            path: [...p.path, ...childPath.path],
+            cost: p.cost + childPath.cost,
+          };
+        }
+    };
+    yield* f(generators);
+  }
 
   public *findPath(
     from: NodeID,
