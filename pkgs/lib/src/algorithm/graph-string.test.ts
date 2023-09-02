@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { StringFinder } from "./graph-string";
-import { DAG } from "./graph";
+import { DAG, DAGForestBuilder } from "./graph";
 
 describe("StringFinder.findFromDag", () => {
   describe("serial dag", () => {
@@ -175,5 +175,40 @@ describe("StringFinder.startWithFromDag", () => {
         path: [abc, def],
       },
     ]);
+  });
+});
+
+describe("with findPartialPath", () => {
+  const builder = new DAGForestBuilder<string, number>();
+  const { id } = builder.newDAG();
+  const abc = builder.nodes.add("abc");
+  const def = builder.nodes.add("def");
+  const ghi = builder.nodes.add("ghi");
+  const forest = builder.build();
+  forest.addEdge(id, abc, def, 0);
+  forest.addEdge(id, def, ghi, 0);
+
+  it("first char", () => {
+    const finder = new StringFinder();
+    const paths = [...forest.findPartialPath(finder.toMatcher("a"))];
+    expect(paths).toEqual([{ dagID: id, path: [abc] }]);
+  });
+
+  it("all chars", () => {
+    const finder = new StringFinder();
+    const paths = [...forest.findPartialPath(finder.toMatcher("abcdefghi"))];
+    expect(paths).toEqual([{ dagID: id, path: [abc, def, ghi] }]);
+  });
+
+  it("2nd node prefix", () => {
+    const finder = new StringFinder();
+    const paths = [...forest.findPartialPath(finder.toMatcher("de"))];
+    expect(paths).toEqual([{ dagID: id, path: [def] }]);
+  });
+
+  it("2nd node match", () => {
+    const finder = new StringFinder();
+    const paths = [...forest.findPartialPath(finder.toMatcher("efg"))];
+    expect(paths).toEqual([{ dagID: id, path: [def, ghi] }]);
   });
 });

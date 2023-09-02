@@ -1,96 +1,13 @@
-import { DAG, NodeID } from "./graph";
+import { DAG, FindPartialPathMatcher, NodeID } from "./graph";
 import { NonEmptyArray, unreachable } from "../common";
-
-// eslint-disable-next-line @typescript-eslint/ban-types
-export interface Char extends String {
-  _charBrand: never;
-}
-const Char = (() => {
-  const segmenter = new Intl.Segmenter("ja", {
-    granularity: "grapheme",
-  });
-  return Object.freeze({
-    new: (c: string): Char => {
-      return c as unknown as Char;
-    },
-    fromString: (s: string): Char[] => {
-      return Array.from(segmenter.segment(s))
-        .map((s) => s.segment)
-        .map((s) => Char.new(s));
-    },
-  });
-})();
-
-class CharsMap {
-  private readonly charsMap: Map<NodeID, Char[]> = new Map();
-  private readonly strMap: Map<NodeID, string> = new Map();
-
-  public add(nodeID: NodeID, str: string): Char[] {
-    if (this.charsMap.has(nodeID)) {
-      return this.charsMap.get(nodeID)!;
-    }
-
-    this.strMap.set(nodeID, str);
-    const chars = Char.fromString(str);
-    this.charsMap.set(nodeID, chars);
-    return chars;
-  }
-
-  public get(nodeID: NodeID): Char[] | undefined {
-    return this.charsMap.get(nodeID);
-  }
-
-  public getStr(nodeID: NodeID): string | undefined {
-    return this.strMap.get(nodeID);
-  }
-}
-
-// eslint-disable-next-line @typescript-eslint/ban-types
-export interface StrPos extends Number {
-  _strPosBrand: never;
-}
-const StrPos = Object.freeze({
-  new: (n: number): StrPos => n as unknown as StrPos,
-  toNumber: (n: StrPos): number => n as unknown as number,
-});
-
-export type UnknownStrRange = StrRange | IncompleteStrRange | EmptyStrRange;
-export type StrRange = {
-  type: "StrRange:complete";
-  startPos: StrPos;
-  endPos: StrPos;
-};
-const StrRange = Object.freeze({
-  new: (startPos: number, endPos: number): StrRange => {
-    return {
-      type: "StrRange:complete",
-      startPos: StrPos.new(startPos),
-      endPos: StrPos.new(endPos),
-    };
-  },
-});
-export type IncompleteStrRange = {
-  type: "StrRange:incomplete";
-  startPos: StrPos;
-};
-const IncompleteStrRange = Object.freeze({
-  new: (startPos: number): IncompleteStrRange => {
-    return {
-      type: "StrRange:incomplete",
-      startPos: StrPos.new(startPos),
-    };
-  },
-});
-export type EmptyStrRange = {
-  type: "StrRange:empty";
-};
-const EmptyStrRange = Object.freeze({
-  new: (): EmptyStrRange => {
-    return {
-      type: "StrRange:empty",
-    };
-  },
-});
+import { Char, CharsMap } from "../char";
+import {
+  EmptyStrRange,
+  findFromChars,
+  IncompleteStrRange,
+  StrPos,
+  StrRange,
+} from "./string";
 
 export type FindStrResult =
   | {
@@ -123,7 +40,7 @@ export type DagStrRange = {
 export type DagStrPrefix = Omit<DagStrRange, "startPos">;
 
 export class StringFinder {
-  private readonly charsMap: CharsMap = new CharsMap();
+  private readonly charsMap = new CharsMap<NodeID>();
   constructor() {}
 
   public *findFromDag<EdgeValue>(
@@ -132,7 +49,7 @@ export class StringFinder {
     query: string
   ): Generator<DagStrRange, undefined> {
     const targetChars = this.charsMap.add(nodeID, dag.nodes.get(nodeID)!);
-    const { target: tRes, remainQueryStartPos } = StringFinder.findFromChars(
+    const { target: tRes, remainQueryStartPos } = findFromChars(
       targetChars,
       Char.fromString(query)
     );
@@ -202,33 +119,15 @@ export class StringFinder {
     }
   }
 
-  public static findFromChars = (
-    target: Char[],
-    query: Char[]
-  ): FindStrResult => {
-    loop1: for (let i = 0; i < target.length; i++) {
-      for (let j = 0; j < query.length; j++) {
-        if (i + j >= target.length) {
-          // クエリのCharが途中まで見つかったが、targetの終端に達した
-          return {
-            target: IncompleteStrRange.new(i),
-            remainQueryStartPos: StrPos.new(j),
-          };
-        }
-        if (target[i + j] !== query[j]) {
-          continue loop1;
-        }
+  public toMatcher<EdgeValue>(
+    query: string
+  ): FindPartialPathMatcher<string, EdgeValue> {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const finder = this;
+    return function* (nodeID, dag) {
+      for (const range of finder.findFromDag(nodeID, dag, query)) {
+        yield range.path;
       }
-      // クエリのCharが全て見つかった
-      return {
-        target: StrRange.new(i, i + query.length),
-        remainQueryStartPos: null,
-      };
-    }
-    // クエリがマッチしなかった
-    return {
-      target: EmptyStrRange.new(),
-      remainQueryStartPos: null,
     };
-  };
+  }
 }

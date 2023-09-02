@@ -188,22 +188,21 @@ export class DAGForest<Node, EdgeValue> {
    */
   public *findPartialPath(
     matcher: FindPartialPathMatcher<Node, EdgeValue>
-  ): Generator<FindPartialPathResult, void, FindPartialPathOp> {
+  ): Generator<FindPartialPathResult, void, FindPartialPathOp | undefined> {
     // FIXME: nodeの取り出し順をいい感じにすると枝刈りもいい感じになるはず
     // いずれ訪問済みのdagをskipするopが必要になるかも
     for (const [nodeID] of this.nodes.nodes.entries()) {
       const dagSet = this.getDagByNodeID(nodeID);
       for (const dagID of dagSet) {
         const dag = this.getDag(dagID);
-        for (const path of matcher(nodeID, dag)) {
+        loop1: for (const path of matcher(nodeID, dag)) {
           const op = yield { path, dagID };
-          if (op === "next-dag") {
-            // switch内ではswitchからのbreakになってしまうので外でbreakする
-            break;
-          }
           switch (op) {
             case "next":
+            case undefined:
               continue;
+            case "next-dag":
+              break loop1;
             default:
               unreachable(op);
           }
