@@ -93,7 +93,7 @@ export type Path = Readonly<{
 
 export class DAG<Node, EdgeValue> {
   public edges: Edges<EdgeValue> = new Edges();
-  constructor(public readonly nodes: Nodes<Node>) {}
+  constructor(public readonly nodes: Nodes<Node> = new Nodes()) {}
 
   public *findPath(
     from: NodeID,
@@ -150,7 +150,7 @@ type FindPartialPathResult = {
   path: NodeID[];
   dagID: DagID;
 };
-type FindPartialPathMatcher<Node, EdgeValue> = (
+export type FindPartialPathMatcher<Node, EdgeValue> = (
   nodeID: NodeID,
   dag: DAG<Node, EdgeValue>
 ) => Generator<NodeID[], void>;

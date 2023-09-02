@@ -34,3 +34,5 @@ export const addToSetMap = <K, V>(m: Map<K, Set<V>>, key: K, v: V) => {
   m.set(key, s);
   return s;
 };
+
+export type NonEmptyArray<T> = [T, ...T[]];
