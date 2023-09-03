@@ -1,0 +1,37 @@
+{
+  "name": "@mpppk/asana",
+  "version": "0.0.1",
+  "scripts": {
+    "start": "NODE_ENV=production tsx src/index.ts",
+    "start:dev": "dotenv -- tsx src/index.ts",
+    "format": "prettier --write .",
+    "watch:type-check": "npx tsc --noEmit --watch",
+    "test": "run-p test:*",
+    "test:unit": "vitest",
+    "test:lint": "eslint .",
+    "test:format": "prettier --check .",
+    "test:type-check": "tsc --noEmit",
+    "op:inject": "op inject -i sample.env -o .env"
+  },
+  "author": "mpppk",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/asana": "^0.18.12",
+    "@types/papaparse": "^5.3.8",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "dotenv-cli": "^7.2.1",
+    "eslint": "^8.36.0",
+    "eslint-config-prettier": "^9.0.0",
+    "npm-run-all": "^4.1.5",
+    "prettier": "^2.8.7",
+    "tsx": "^3.12.6",
+    "typescript": "^5.0.2",
+    "vitest": "^0.34.0",
+    "zod": "^3.21.4"
+  },
+  "dependencies": {
+    "@fast-csv/parse": "^4.3.6",
+    "papaparse": "^5.4.1"
+  }
+}
