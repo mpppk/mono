@@ -90,6 +90,29 @@ export type Path = Readonly<{
   path: NodeID[];
   cost: number;
 }>;
+const Path = Object.freeze({
+  clone(path: Path): Path {
+    return { path: [...path.path], cost: path.cost };
+  },
+  // 連続して同じノードを通過するパスについて、最初のノードを残して削除する
+  normalize(path: Path): Path {
+    if (path.path.length === 0) {
+      throw new Error("empty path provided to normalizePath");
+    }
+    if (path.path.length === 1) {
+      return path;
+    }
+
+    const newPath: NodeID[] = [path.path[0]];
+    for (let i = 1; i < path.path.length; i++) {
+      const lastPath = newPath[newPath.length - 1];
+      if (path.path[i] !== lastPath) {
+        newPath.push(path.path[i]);
+      }
+    }
+    return { path: newPath, cost: path.cost };
+  },
+});
 
 export class DAG<Node, EdgeValue> {
   public edges: Edges<EdgeValue> = new Edges();
@@ -109,19 +132,24 @@ export class DAG<Node, EdgeValue> {
     }
     const f = function* (generators2: typeof generators): Generator<Path> {
       const generators3 = [...generators2];
-      const g = generators2.shift();
-      if (g === undefined) {
+      const g = generators3.shift();
+      if (g && generators3.length === 0) {
+        yield* g;
         return;
       }
-      for (const childPath of f(generators3))
-        for (const p of g) {
+      const parentPaths = [...g!];
+      for (const childPath of f(generators3)) {
+        for (const p of parentPaths) {
           yield {
             path: [...p.path, ...childPath.path],
             cost: p.cost + childPath.cost,
           };
         }
+      }
     };
-    yield* f(generators);
+    for (const p of f(generators)) {
+      yield Path.normalize(p);
+    }
   }
 
   public *findPath(

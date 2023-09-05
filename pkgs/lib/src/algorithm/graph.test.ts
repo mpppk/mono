@@ -116,4 +116,59 @@ describe("DAG.findPartialPath", () => {
       // 一つのDAGから一つ見つかったら以降は打ち切るので、b2 -> c3はなし
     ]);
   });
+
+  describe("DAG.findWaypointPath", () => {
+    const dag = new DAG<string, number>(new Nodes());
+    const a = dag.nodes.add("a");
+    const b = dag.nodes.add("b");
+    const c = dag.nodes.add("c");
+    const d = dag.nodes.add("d");
+    const e = dag.nodes.add("e");
+    dag.edges.add(a, b, 0);
+    dag.edges.add(b, c, 0);
+    dag.edges.add(b, d, 0);
+    dag.edges.add(c, e, 0);
+    dag.edges.add(d, e, 0);
+
+    it("a to e", () => {
+      // を経由するルートだけを列挙する
+      const paths = [...dag.findWaypointPath([a, e])];
+      expect(paths).toEqual([
+        {
+          cost: 0,
+          path: [a, b, c, e],
+        },
+        {
+          cost: 0,
+          path: [a, b, d, e],
+        },
+      ]);
+    });
+
+    it("via b", () => {
+      // bを経由するルートだけを列挙する
+      const paths = [...dag.findWaypointPath([a, b, e])];
+      expect(paths).toEqual([
+        {
+          cost: 0,
+          path: [a, b, c, e],
+        },
+        {
+          cost: 0,
+          path: [a, b, d, e],
+        },
+      ]);
+    });
+
+    it("via c", () => {
+      // bを経由するルートだけを列挙する
+      const paths = [...dag.findWaypointPath([a, c, e])];
+      expect(paths).toEqual([
+        {
+          cost: 0,
+          path: [a, b, c, e],
+        },
+      ]);
+    });
+  });
 });
