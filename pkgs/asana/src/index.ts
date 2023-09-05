@@ -1,18 +1,9 @@
 import { loadEnv } from "./env";
-import fs from "fs";
-import * as Papa from "papaparse";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type FixeMeAny = any;
+import { loadAsanaCsv, writeCsvFile } from "./csv";
 
 const main = async () => {
   const env = loadEnv();
-  const readFile = fs.promises.readFile;
-  const contents = await readFile(env.CSV_FILE, "utf8");
-  const results = Papa.parse(contents, {
-    header: true,
-    skipEmptyLines: true,
-  });
+  const csv = await loadAsanaCsv(env.CSV_FILE);
 
   const toScrapboxLink = (scrapboxUrl: string) => {
     let link = scrapboxUrl.replace(
@@ -23,8 +14,8 @@ const main = async () => {
     return link.replaceAll("%2F", "/").replaceAll("_", " ");
   };
 
-  const rows = results.data
-    .filter((row: FixeMeAny) => {
+  const rows = csv.data
+    .filter((row) => {
       const completedAtStr = row["Completed At"];
       if (completedAtStr === "") {
         return false;
@@ -35,7 +26,7 @@ const main = async () => {
         completedAt < new Date("2023-09-01")
       );
     })
-    .map((row: FixeMeAny) => ({
+    .map((row) => ({
       ...row,
       link: toScrapboxLink(row["Scrapbox"]),
     }));
@@ -59,6 +50,7 @@ const main = async () => {
     return `[${row.link}](Asana:[${row.Name} ${toAsanaUrl(row["Task ID"])}])`;
   });
   console.log(sbText.join("\n"));
+  console.log(await writeCsvFile(rows, "./out.csv"));
 };
 
 main();
