@@ -16,7 +16,7 @@ const main = async () => {
 
   const toScrapboxLink = (scrapboxUrl: string) => {
     let link = scrapboxUrl.replace(
-      `Notahttps://scrapbox.io/${env.SCRAPBOX_PROJECT}/`,
+      `https://scrapbox.io/${env.SCRAPBOX_PROJECT}/`,
       ""
     );
     link = decodeURI(link);
