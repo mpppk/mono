@@ -75,6 +75,8 @@ type CostFunction<Node, EdgeValue> = (
   context: DAG<Node, EdgeValue>
 ) => number;
 export type FindPathOptions<Node, EdgeValue> = Readonly<{
+  from?: NodeID;
+  to?: NodeID;
   costF: CostFunction<Node, EdgeValue>;
   defaultCost: number;
 }>;
@@ -118,6 +120,20 @@ export class DAG<Node, EdgeValue> {
   public edges: Edges<EdgeValue> = new Edges();
   constructor(public readonly nodes: Nodes<Node> = new Nodes()) {}
 
+  get roots(): NodeID[] {
+    return [...this.nodes.nodes.keys()].filter((nodeID) => {
+      const { parent } = this.edges.get(nodeID);
+      return parent.length === 0;
+    });
+  }
+
+  get leafs(): NodeID[] {
+    return [...this.nodes.nodes.keys()].filter((nodeID) => {
+      const { children } = this.edges.get(nodeID);
+      return children.length === 0;
+    });
+  }
+
   public *findWaypointPath(
     waypoints: TwoOrMoreArray<NodeID>,
     options: FindPathOptions<Node, EdgeValue> = defaultFindPathOptions()
@@ -128,7 +144,7 @@ export class DAG<Node, EdgeValue> {
     const generators: ReturnType<typeof this.findPath>[] = [];
     for (let i = 1; i < waypoints.length; i++) {
       const [from, to] = [waypoints[i - 1], waypoints[i]];
-      generators.push(this.findPath(from, to, options));
+      generators.push(this.findPath({ from, to, ...options }));
     }
     const f = function* (generators2: typeof generators): Generator<Path> {
       const generators3 = [...generators2];
@@ -153,19 +169,19 @@ export class DAG<Node, EdgeValue> {
   }
 
   public *findPath(
-    from: NodeID,
-    to: NodeID,
     options: FindPathOptions<Node, EdgeValue> = defaultFindPathOptions()
   ) {
     const queue = new PriorityQueue<Path>((p) => p.cost);
-    queue.push({ path: [from], cost: options.defaultCost });
+    const from = options.from ? [options.from] : this.roots;
+    const to = options.to ? [options.to] : this.leafs;
+    for (const f of from) {
+      queue.push({ path: [f], cost: options.defaultCost });
+    }
     while (queue.size() > 0) {
       const path = queue.pop();
-      if (path === null) {
-        break;
-      }
       const lastNode = path.path[path.path.length - 1];
-      if (lastNode === to) {
+      if (to.includes(lastNode)) {
+        // これでいいんだっけ?
         yield path;
         continue;
       }

@@ -55,7 +55,7 @@ describe("DAG.findPath", () => {
       defaultCost: 1,
       costF: (edge) => edge.value,
     };
-    for (const path of dag.findPath(a, e, opt)) {
+    for (const path of dag.findPath({ from: a, to: e, ...opt })) {
       paths.push(path);
     }
     expect(paths).toEqual([
