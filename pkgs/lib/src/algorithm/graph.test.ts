@@ -8,6 +8,8 @@ import {
   Nodes,
   Path,
 } from "./graph";
+import { StringFinder } from "./graph-string";
+import { NonEmptyArray } from "../common";
 
 describe("Graph", () => {
   it("should work", () => {
@@ -215,5 +217,66 @@ describe("DAG.findWaypointPath2", () => {
         path: [b, c, e],
       },
     ]);
+  });
+});
+
+describe("advanced: find string", () => {
+  const builder = new DAGForestBuilder<string, number>();
+  const { id } = builder.newDAG();
+  const abc = builder.nodes.add("abc");
+  const def = builder.nodes.add("def");
+  const ghi = builder.nodes.add("ghi");
+  const jkl = builder.nodes.add("jkl");
+  const forest = builder.build();
+  forest.addEdge(id, abc, def, 0);
+  forest.addEdge(id, def, ghi, 0);
+  forest.addEdge(id, def, jkl, 0);
+
+  it("match single node", () => {
+    const finder = new StringFinder();
+    const paths = [...forest.findPartialPath(finder.toMatcher("a"))];
+    const matchedPaths: Path[] = [];
+    for (const path of paths) {
+      for (const dag of forest.dags) {
+        matchedPaths.push(
+          ...[...dag.findWaypointPath(NonEmptyArray.parse(path.path))]
+        );
+      }
+    }
+    expect(matchedPaths).toEqual([
+      { path: [abc, def, ghi], cost: 0 },
+      { path: [abc, def, jkl], cost: 0 },
+    ]);
+  });
+
+  it("match multi node", () => {
+    const finder = new StringFinder();
+    const paths = [...forest.findPartialPath(finder.toMatcher("abcd"))];
+    const matchedPaths: Path[] = [];
+    for (const path of paths) {
+      for (const dag of forest.dags) {
+        matchedPaths.push(
+          ...[...dag.findWaypointPath(NonEmptyArray.parse(path.path))]
+        );
+      }
+    }
+    expect(matchedPaths).toEqual([
+      { path: [abc, def, ghi], cost: 0 },
+      { path: [abc, def, jkl], cost: 0 },
+    ]);
+  });
+
+  it("match multi node2", () => {
+    const finder = new StringFinder();
+    const paths = [...forest.findPartialPath(finder.toMatcher("fj"))];
+    const matchedPaths: Path[] = [];
+    for (const path of paths) {
+      for (const dag of forest.dags) {
+        matchedPaths.push(
+          ...[...dag.findWaypointPath(NonEmptyArray.parse(path.path))]
+        );
+      }
+    }
+    expect(matchedPaths).toEqual([{ path: [abc, def, jkl], cost: 0 }]);
   });
 });

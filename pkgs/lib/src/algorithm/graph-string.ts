@@ -43,7 +43,7 @@ export class StringFinder {
   private readonly charsMap = new CharsMap<NodeID>();
   constructor() {}
 
-  public *findFromDag<EdgeValue>(
+  public *findFromNode<EdgeValue>(
     nodeID: NodeID,
     dag: DAG<string, EdgeValue>,
     query: string
@@ -74,7 +74,7 @@ export class StringFinder {
     const remainQuery = query.slice(StrPos.toNumber(remainQueryStartPos!));
     const children = (dag.edges.get(nodeID) ?? []).children.map((c) => c.to);
     for (const child of children) {
-      for (const result of this.startWithFromDag([child], dag, remainQuery)) {
+      for (const result of this.startWithFromNode([child], dag, remainQuery)) {
         yield {
           path: [nodeID, ...result.path],
           startPos: tRes.startPos,
@@ -85,7 +85,7 @@ export class StringFinder {
     return;
   }
 
-  public *startWithFromDag<EdgeValue>(
+  public *startWithFromNode<EdgeValue>(
     path: NonEmptyArray<NodeID>,
     dag: DAG<string, EdgeValue>,
     query: string
@@ -111,7 +111,7 @@ export class StringFinder {
     // nodeIDのノードで完結しないケース
     const children = (dag.edges.get(nodeID) ?? []).children.map((c) => c.to);
     for (const child of children) {
-      yield* this.startWithFromDag(
+      yield* this.startWithFromNode(
         [...path, child],
         dag,
         query.slice(nodeStr.length)
@@ -125,7 +125,7 @@ export class StringFinder {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const finder = this;
     return function* (nodeID, dag) {
-      for (const range of finder.findFromDag(nodeID, dag, query)) {
+      for (const range of finder.findFromNode(nodeID, dag, query)) {
         yield range.path;
       }
     };

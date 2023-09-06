@@ -13,12 +13,12 @@ describe("StringFinder.findFromDag", () => {
     dag.edges.add(def, ghi, 0);
 
     it("miss match", () => {
-      const res = [...finder.findFromDag(abc, dag, "x")];
+      const res = [...finder.findFromNode(abc, dag, "x")];
       expect(res).toEqual([]);
     });
 
     it("first char", () => {
-      const res = [...finder.findFromDag(abc, dag, "a")];
+      const res = [...finder.findFromNode(abc, dag, "a")];
       expect(res).toEqual([
         {
           endPos: 1,
@@ -29,7 +29,7 @@ describe("StringFinder.findFromDag", () => {
     });
 
     it("first 2 chars", () => {
-      const res = [...finder.findFromDag(abc, dag, "ab")];
+      const res = [...finder.findFromNode(abc, dag, "ab")];
       expect(res).toEqual([
         {
           endPos: 2,
@@ -40,7 +40,7 @@ describe("StringFinder.findFromDag", () => {
     });
 
     it("first node", () => {
-      const res = [...finder.findFromDag(abc, dag, "abc")];
+      const res = [...finder.findFromNode(abc, dag, "abc")];
       expect(res).toEqual([
         {
           endPos: 3,
@@ -51,7 +51,7 @@ describe("StringFinder.findFromDag", () => {
     });
 
     it("first node, suffix", () => {
-      const res = [...finder.findFromDag(abc, dag, "bc")];
+      const res = [...finder.findFromNode(abc, dag, "bc")];
       expect(res).toEqual([
         {
           endPos: 3,
@@ -62,7 +62,7 @@ describe("StringFinder.findFromDag", () => {
     });
 
     it("first node, suffix char", () => {
-      const res = [...finder.findFromDag(abc, dag, "c")];
+      const res = [...finder.findFromNode(abc, dag, "c")];
       expect(res).toEqual([
         {
           endPos: 3,
@@ -73,7 +73,7 @@ describe("StringFinder.findFromDag", () => {
     });
 
     it("2 node", () => {
-      const res = [...finder.findFromDag(abc, dag, "abcd")];
+      const res = [...finder.findFromNode(abc, dag, "abcd")];
       expect(res).toEqual([
         {
           endPos: 1,
@@ -84,7 +84,7 @@ describe("StringFinder.findFromDag", () => {
     });
 
     it("2 node, full match", () => {
-      const res = [...finder.findFromDag(abc, dag, "abcdef")];
+      const res = [...finder.findFromNode(abc, dag, "abcdef")];
       expect(res).toEqual([
         {
           endPos: 3,
@@ -95,7 +95,7 @@ describe("StringFinder.findFromDag", () => {
     });
 
     it("2 node, partial match", () => {
-      const res = [...finder.findFromDag(abc, dag, "bcde")];
+      const res = [...finder.findFromNode(abc, dag, "bcde")];
       expect(res).toEqual([
         {
           endPos: 2,
@@ -106,12 +106,12 @@ describe("StringFinder.findFromDag", () => {
     });
 
     it("2 node, miss match", () => {
-      const res = [...finder.findFromDag(abc, dag, "abcxxx")];
+      const res = [...finder.findFromNode(abc, dag, "abcxxx")];
       expect(res).toEqual([]);
     });
 
     it("3 node, full match", () => {
-      const res = [...finder.findFromDag(abc, dag, "abcdefghi")];
+      const res = [...finder.findFromNode(abc, dag, "abcdefghi")];
       expect(res).toEqual([
         {
           endPos: 3,
@@ -133,7 +133,7 @@ describe("StringFinder.startWithFromDag", () => {
   dag.edges.add(def, ghi, 0);
 
   it("first char", () => {
-    const res = [...finder.startWithFromDag([abc], dag, "a")];
+    const res = [...finder.startWithFromNode([abc], dag, "a")];
     expect(res).toEqual([
       {
         endPos: 1,
@@ -143,7 +143,7 @@ describe("StringFinder.startWithFromDag", () => {
   });
 
   it("2 chars", () => {
-    const res = [...finder.startWithFromDag([abc], dag, "ab")];
+    const res = [...finder.startWithFromNode([abc], dag, "ab")];
     expect(res).toEqual([
       {
         endPos: 2,
@@ -153,7 +153,7 @@ describe("StringFinder.startWithFromDag", () => {
   });
 
   it("first node all chars", () => {
-    const res = [...finder.startWithFromDag([abc], dag, "abc")];
+    const res = [...finder.startWithFromNode([abc], dag, "abc")];
     expect(res).toEqual([
       {
         endPos: 3,
@@ -163,12 +163,12 @@ describe("StringFinder.startWithFromDag", () => {
   });
 
   it("first node not prefix", () => {
-    const res = [...finder.startWithFromDag([abc], dag, "b")];
+    const res = [...finder.startWithFromNode([abc], dag, "b")];
     expect(res).toEqual([]);
   });
 
   it("2 node", () => {
-    const res = [...finder.startWithFromDag([abc], dag, "abcd")];
+    const res = [...finder.startWithFromNode([abc], dag, "abcd")];
     expect(res).toEqual([
       {
         endPos: 1,

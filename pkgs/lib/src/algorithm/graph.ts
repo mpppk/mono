@@ -243,6 +243,10 @@ export class DAGForest<Node, EdgeValue> {
     return this._nodes;
   }
 
+  get dags(): DAG<Node, EdgeValue>[] {
+    return this._dags;
+  }
+
   public getDag(id: DagID): DAG<Node, EdgeValue> {
     return this._dags[DagID.toNumber(id)];
   }

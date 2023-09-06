@@ -36,4 +36,12 @@ export const addToSetMap = <K, V>(m: Map<K, Set<V>>, key: K, v: V) => {
 };
 
 export type NonEmptyArray<T> = [T, ...T[]];
+export const NonEmptyArray = Object.freeze({
+  parse: <T>(arr: T[]): NonEmptyArray<T> => {
+    if (arr.length === 0) {
+      throw new Error("empty array");
+    }
+    return arr as NonEmptyArray<T>;
+  },
+});
 export type TwoOrMoreArray<T> = [T, T, ...T[]];
