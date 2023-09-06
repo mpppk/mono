@@ -1,5 +1,5 @@
 import { PriorityQueue } from "./priority-queue";
-import { addToSetMap, TwoOrMoreArray, unreachable } from "../common";
+import { addToSetMap, NonEmptyArray, unreachable } from "../common";
 
 // eslint-disable-next-line @typescript-eslint/ban-types
 export interface NodeID extends Number {
@@ -135,17 +135,21 @@ export class DAG<Node, EdgeValue> {
   }
 
   public *findWaypointPath(
-    waypoints: TwoOrMoreArray<NodeID>,
+    waypoints: NonEmptyArray<NodeID>,
     options: FindPathOptions<Node, EdgeValue> = defaultFindPathOptions()
   ) {
-    if (waypoints.length < 2) {
-      throw new Error("waypoints.length must be >= 2");
+    if (waypoints.length < 1) {
+      throw new Error("waypoints.length must be >= 1");
     }
     const generators: ReturnType<typeof this.findPath>[] = [];
+    const { from, to } = options;
+    generators.push(this.findPath({ from, to: waypoints[0], ...options }));
     for (let i = 1; i < waypoints.length; i++) {
       const [from, to] = [waypoints[i - 1], waypoints[i]];
       generators.push(this.findPath({ from, to, ...options }));
     }
+    const lastWaypoint = waypoints[waypoints.length - 1];
+    generators.push(this.findPath({ from: lastWaypoint, to, ...options }));
     const f = function* (generators2: typeof generators): Generator<Path> {
       const generators3 = [...generators2];
       const g = generators3.shift();
@@ -172,8 +176,8 @@ export class DAG<Node, EdgeValue> {
     options: FindPathOptions<Node, EdgeValue> = defaultFindPathOptions()
   ) {
     const queue = new PriorityQueue<Path>((p) => p.cost);
-    const from = options.from ? [options.from] : this.roots;
-    const to = options.to ? [options.to] : this.leafs;
+    const from = options.from === undefined ? this.roots : [options.from];
+    const to = options.to === undefined ? this.leafs : [options.to];
     for (const f of from) {
       queue.push({ path: [f], cost: options.defaultCost });
     }
@@ -182,6 +186,7 @@ export class DAG<Node, EdgeValue> {
       const lastNode = path.path[path.path.length - 1];
       if (to.includes(lastNode)) {
         // これでいいんだっけ?
+        // toになるのはユーザが指定した一つだけか、leafなので多分大丈夫
         yield path;
         continue;
       }

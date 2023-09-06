@@ -38,18 +38,18 @@ describe("Graph", () => {
 });
 
 describe("DAG.findPath", () => {
+  const dag = new DAG<string, number>(new Nodes());
+  const a = dag.nodes.add("a");
+  const b = dag.nodes.add("b");
+  const c = dag.nodes.add("c");
+  const d = dag.nodes.add("d");
+  const e = dag.nodes.add("e");
+  dag.edges.add(a, b, 0);
+  dag.edges.add(b, c, 1);
+  dag.edges.add(b, d, 0);
+  dag.edges.add(c, e, 0);
+  dag.edges.add(d, e, 0);
   it("simple", () => {
-    const dag = new DAG<string, number>(new Nodes());
-    const a = dag.nodes.add("a");
-    const b = dag.nodes.add("b");
-    const c = dag.nodes.add("c");
-    const d = dag.nodes.add("d");
-    const e = dag.nodes.add("e");
-    dag.edges.add(a, b, 0);
-    dag.edges.add(b, c, 1);
-    dag.edges.add(b, d, 0);
-    dag.edges.add(c, e, 0);
-    dag.edges.add(d, e, 0);
     const paths: Path[] = [];
     const opt: FindPathOptions<string, number> = {
       defaultCost: 1,
@@ -61,6 +61,16 @@ describe("DAG.findPath", () => {
     expect(paths).toEqual([
       { path: [a, b, d, e], cost: 1 }, // cost = defaultCost
       { path: [a, b, c, e], cost: 2 }, // cost = defaultCost + 1(b→c)
+    ]);
+  });
+
+  it("same node", () => {
+    const opt: FindPathOptions<string, number> = {
+      defaultCost: 1,
+      costF: (edge) => edge.value,
+    };
+    expect([...dag.findPath({ from: a, to: a, ...opt })]).toEqual([
+      { path: [a], cost: 1 }, // cost = defaultCost
     ]);
   });
 });
@@ -116,59 +126,94 @@ describe("DAG.findPartialPath", () => {
       // 一つのDAGから一つ見つかったら以降は打ち切るので、b2 -> c3はなし
     ]);
   });
+});
 
-  describe("DAG.findWaypointPath", () => {
-    const dag = new DAG<string, number>(new Nodes());
-    const a = dag.nodes.add("a");
-    const b = dag.nodes.add("b");
-    const c = dag.nodes.add("c");
-    const d = dag.nodes.add("d");
-    const e = dag.nodes.add("e");
-    dag.edges.add(a, b, 0);
-    dag.edges.add(b, c, 0);
-    dag.edges.add(b, d, 0);
-    dag.edges.add(c, e, 0);
-    dag.edges.add(d, e, 0);
+describe("DAG.findWaypointPath", () => {
+  const dag = new DAG<string, number>(new Nodes());
+  const a = dag.nodes.add("a");
+  const b = dag.nodes.add("b");
+  const c = dag.nodes.add("c");
+  const d = dag.nodes.add("d");
+  const e = dag.nodes.add("e");
+  dag.edges.add(a, b, 0);
+  dag.edges.add(b, c, 0);
+  dag.edges.add(b, d, 0);
+  dag.edges.add(c, e, 0);
+  dag.edges.add(d, e, 0);
 
-    it("a to e", () => {
-      // を経由するルートだけを列挙する
-      const paths = [...dag.findWaypointPath([a, e])];
-      expect(paths).toEqual([
-        {
-          cost: 0,
-          path: [a, b, c, e],
-        },
-        {
-          cost: 0,
-          path: [a, b, d, e],
-        },
-      ]);
-    });
+  it("a to e", () => {
+    // を経由するルートだけを列挙する
+    const paths = [...dag.findWaypointPath([a, e])];
+    expect(paths).toEqual([
+      {
+        cost: 0,
+        path: [a, b, c, e],
+      },
+      {
+        cost: 0,
+        path: [a, b, d, e],
+      },
+    ]);
+  });
 
-    it("via b", () => {
-      // bを経由するルートだけを列挙する
-      const paths = [...dag.findWaypointPath([a, b, e])];
-      expect(paths).toEqual([
-        {
-          cost: 0,
-          path: [a, b, c, e],
-        },
-        {
-          cost: 0,
-          path: [a, b, d, e],
-        },
-      ]);
-    });
+  it("via b", () => {
+    // bを経由するルートだけを列挙する
+    const paths = [...dag.findWaypointPath([a, b, e])];
+    expect(paths).toEqual([
+      {
+        cost: 0,
+        path: [a, b, c, e],
+      },
+      {
+        cost: 0,
+        path: [a, b, d, e],
+      },
+    ]);
+  });
 
-    it("via c", () => {
-      // bを経由するルートだけを列挙する
-      const paths = [...dag.findWaypointPath([a, c, e])];
-      expect(paths).toEqual([
-        {
-          cost: 0,
-          path: [a, b, c, e],
-        },
-      ]);
-    });
+  it("via c", () => {
+    // bを経由するルートだけを列挙する
+    const paths = [...dag.findWaypointPath([a, c, e])];
+    expect(paths).toEqual([
+      {
+        cost: 0,
+        path: [a, b, c, e],
+      },
+    ]);
+  });
+});
+
+describe("DAG.findWaypointPath2", () => {
+  const dag = new DAG<string, number>(new Nodes());
+  const a = dag.nodes.add("a");
+  const b = dag.nodes.add("b");
+  const c = dag.nodes.add("c");
+  const d = dag.nodes.add("d");
+  const e = dag.nodes.add("e");
+  dag.edges.add(a, c, 0);
+  dag.edges.add(b, c, 0);
+  dag.edges.add(c, d, 0);
+  dag.edges.add(c, e, 0);
+
+  it("via c", () => {
+    const paths = [...dag.findWaypointPath([c])];
+    expect(paths).toEqual([
+      {
+        cost: 0,
+        path: [a, c, d],
+      },
+      {
+        cost: 0,
+        path: [b, c, d],
+      },
+      {
+        cost: 0,
+        path: [a, c, e],
+      },
+      {
+        cost: 0,
+        path: [b, c, e],
+      },
+    ]);
   });
 });
