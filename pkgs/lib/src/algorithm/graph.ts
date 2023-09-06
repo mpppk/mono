@@ -209,26 +209,35 @@ export type FindPartialPathMatcher<Node, EdgeValue> = (
   dag: DAG<Node, EdgeValue>
 ) => Generator<NodeID[], void>;
 
-export class DAGForest<Node, EdgeValue> {
+class ForestDags<Node, EdgeValue> {
   private nodeDagMap: Map<NodeID, Set<DagID>> = new Map();
-  constructor(
-    private _nodes: Nodes<Node> = new Nodes(),
-    private _dags: DAG<Node, EdgeValue>[] = []
-  ) {}
-  get nodes(): Nodes<Node> {
-    return this._nodes;
-  }
+  private _dags: DAG<Node, EdgeValue>[] = [];
+  constructor(private nodes: Nodes<Node>) {}
 
-  get dags(): DAG<Node, EdgeValue>[] {
-    return this._dags;
-  }
-
-  public getDag(id: DagID): DAG<Node, EdgeValue> {
+  public get(id: DagID): DAG<Node, EdgeValue> {
     return this._dags[DagID.toNumber(id)];
   }
 
-  public getDagByNodeID(id: NodeID): Set<DagID> {
+  public getByNodeID(id: NodeID): Set<DagID> {
     return this.nodeDagMap.get(id) ?? new Set();
+  }
+
+  public add(dag: DAG<Node, EdgeValue>): DagID {
+    this._dags.push(dag);
+    return DagID.new(this._dags.length - 1);
+  }
+
+  public new(): { dag: DAG<Node, EdgeValue>; id: DagID } {
+    const dag = new DAG<Node, EdgeValue>(this.nodes);
+    return { dag, id: this.add(dag) };
+  }
+
+  public list(): DAG<Node, EdgeValue>[] {
+    return this._dags;
+  }
+
+  public size(): number {
+    return this._dags.length;
   }
 
   public addEdge(
@@ -237,23 +246,36 @@ export class DAGForest<Node, EdgeValue> {
     to: NodeID,
     value: EdgeValue
   ): void {
-    this.getDag(dagID).edges.add(from, to, value);
+    this.get(dagID).edges.add(from, to, value);
     addToSetMap(this.nodeDagMap, from, dagID);
   }
+}
 
-  public addNode(node: Node): NodeID {
-    return this.nodes.add(node);
+class DagForestEdges<Node, EdgeValue> {
+  constructor(private dags: ForestDags<Node, EdgeValue>) {}
+  public add(dagID: DagID, from: NodeID, to: NodeID, value: EdgeValue): void {
+    this.dags.addEdge(dagID, from, to, value);
+  }
+}
+
+export class DagForest<Node, EdgeValue> {
+  private readonly _edges: DagForestEdges<Node, EdgeValue>;
+  constructor(
+    private _nodes: Nodes<Node> = new Nodes(),
+    private _dags = new ForestDags<Node, EdgeValue>(_nodes) // private _dags: DAG<Node, EdgeValue>[] = []
+  ) {
+    this._edges = new DagForestEdges(this._dags);
+  }
+  get nodes(): Nodes<Node> {
+    return this._nodes;
   }
 
-  public addDAG(dag: DAG<Node, EdgeValue>): number {
-    this.dags.push(dag);
-    return this.dags.length - 1;
+  get dags(): ForestDags<Node, EdgeValue> {
+    return this._dags;
   }
 
-  public newDAG(): { dag: DAG<Node, EdgeValue>; id: DagID } {
-    const dag = new DAG<Node, EdgeValue>(this.nodes);
-    this.addDAG(dag);
-    return { dag, id: DagID.new(this.dags.length - 1) };
+  get edges() {
+    return this._edges;
   }
 
   /**
@@ -265,9 +287,9 @@ export class DAGForest<Node, EdgeValue> {
     // FIXME: nodeの取り出し順をいい感じにすると枝刈りもいい感じになるはず
     // いずれ訪問済みのdagをskipするopが必要になるかも
     for (const [nodeID] of this.nodes.nodes.entries()) {
-      const dagSet = this.getDagByNodeID(nodeID);
+      const dagSet = this.dags.getByNodeID(nodeID);
       for (const dagID of dagSet) {
-        const dag = this.getDag(dagID);
+        const dag = this.dags.get(dagID);
         loop1: for (const path of matcher(nodeID, dag)) {
           const op = yield { path, dagID };
           switch (op) {

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   DAG,
-  DAGForest,
+  DagForest,
   FindPartialPathOp,
   FindPathOptions,
   NodeID,
@@ -13,11 +13,11 @@ import { NonEmptyArray } from "../common";
 
 describe("Graph", () => {
   it("should work", () => {
-    const forest = new DAGForest<string, number>();
-    const { dag, id } = forest.newDAG();
-    const a = forest.addNode("a");
-    const b = forest.addNode("b");
-    const c = forest.addNode("c");
+    const forest = new DagForest<string, number>();
+    const { dag, id } = forest.dags.new();
+    const a = forest.nodes.add("a");
+    const b = forest.nodes.add("b");
+    const c = forest.nodes.add("c");
     dag.edges.add(a, b, 0);
     dag.edges.add(b, c, 0);
     expect(dag.edges.get(a)).toEqual({
@@ -33,7 +33,7 @@ describe("Graph", () => {
       children: [],
     });
 
-    expect(forest.getDag(id)).toEqual(dag);
+    expect(forest.dags.get(id)).toEqual(dag);
     expect(forest.nodes.get(a)).toEqual("a");
   });
 });
@@ -78,23 +78,23 @@ describe("DAG.findPath", () => {
 
 describe("DAG.findPartialPath", () => {
   it("simple", () => {
-    const forest = new DAGForest<string, number>();
-    const { dag: dag1, id: dagId1 } = forest.newDAG();
+    const forest = new DagForest<string, number>();
+    const { dag: dag1, id: dagId1 } = forest.dags.new();
     const a1 = dag1.nodes.add("a1");
     const b1 = dag1.nodes.add("b1");
     const c1 = dag1.nodes.add("c1");
     const d1 = dag1.nodes.add("d1");
-    const { dag: dag2, id: dagId2 } = forest.newDAG();
+    const { dag: dag2, id: dagId2 } = forest.dags.new();
     const a2 = dag2.nodes.add("a2");
     const b2 = dag2.nodes.add("b2");
     const c2 = dag2.nodes.add("c2");
     const c3 = dag2.nodes.add("c3");
-    forest.addEdge(dagId1, a1, b1, 0);
-    forest.addEdge(dagId1, b1, c1, 0);
-    forest.addEdge(dagId1, b1, d1, 0);
-    forest.addEdge(dagId2, a2, b2, 0);
-    forest.addEdge(dagId2, b2, c2, 0);
-    forest.addEdge(dagId2, b2, c3, 0);
+    forest.edges.add(dagId1, a1, b1, 0);
+    forest.edges.add(dagId1, b1, c1, 0);
+    forest.edges.add(dagId1, b1, d1, 0);
+    forest.edges.add(dagId2, a2, b2, 0);
+    forest.edges.add(dagId2, b2, c2, 0);
+    forest.edges.add(dagId2, b2, c3, 0);
     // b* -> c*であるようなパスを各DAGから最大1つ探す
     function* matcher(nodeId: NodeID, dag: DAG<string, number>) {
       const node = dag.nodes.get(nodeId);
@@ -219,22 +219,22 @@ describe("DAG.findWaypointPath2", () => {
 });
 
 describe("advanced: find string", () => {
-  const forest = new DAGForest<string, number>();
-  const { id } = forest.newDAG();
+  const forest = new DagForest<string, number>();
+  const { id } = forest.dags.new();
   const abc = forest.nodes.add("abc");
   const def = forest.nodes.add("def");
   const ghi = forest.nodes.add("ghi");
   const jkl = forest.nodes.add("jkl");
-  forest.addEdge(id, abc, def, 0);
-  forest.addEdge(id, def, ghi, 0);
-  forest.addEdge(id, def, jkl, 0);
+  forest.edges.add(id, abc, def, 0);
+  forest.edges.add(id, def, ghi, 0);
+  forest.edges.add(id, def, jkl, 0);
 
   it("match single node", () => {
     const finder = new StringFinder();
     const paths = [...forest.findPartialPath(finder.toMatcher("a"))];
     const matchedPaths: Path[] = [];
     for (const path of paths) {
-      for (const dag of forest.dags) {
+      for (const dag of forest.dags.list()) {
         matchedPaths.push(
           ...[...dag.findWaypointPath(NonEmptyArray.parse(path.path))]
         );
@@ -251,7 +251,7 @@ describe("advanced: find string", () => {
     const paths = [...forest.findPartialPath(finder.toMatcher("abcd"))];
     const matchedPaths: Path[] = [];
     for (const path of paths) {
-      for (const dag of forest.dags) {
+      for (const dag of forest.dags.list()) {
         matchedPaths.push(
           ...[...dag.findWaypointPath(NonEmptyArray.parse(path.path))]
         );
@@ -268,7 +268,7 @@ describe("advanced: find string", () => {
     const paths = [...forest.findPartialPath(finder.toMatcher("fj"))];
     const matchedPaths: Path[] = [];
     for (const path of paths) {
-      for (const dag of forest.dags) {
+      for (const dag of forest.dags.list()) {
         matchedPaths.push(
           ...[...dag.findWaypointPath(NonEmptyArray.parse(path.path))]
         );
