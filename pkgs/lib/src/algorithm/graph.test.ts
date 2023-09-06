@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   DAG,
-  DAGForestBuilder,
+  DAGForest,
   FindPartialPathOp,
   FindPathOptions,
   NodeID,
@@ -13,11 +13,11 @@ import { NonEmptyArray } from "../common";
 
 describe("Graph", () => {
   it("should work", () => {
-    const builder = new DAGForestBuilder<string, number>();
-    const { dag, id } = builder.newDAG();
-    const a = builder.addNode("a");
-    const b = builder.addNode("b");
-    const c = builder.addNode("c");
+    const forest = new DAGForest<string, number>();
+    const { dag, id } = forest.newDAG();
+    const a = forest.addNode("a");
+    const b = forest.addNode("b");
+    const c = forest.addNode("c");
     dag.edges.add(a, b, 0);
     dag.edges.add(b, c, 0);
     expect(dag.edges.get(a)).toEqual({
@@ -33,7 +33,6 @@ describe("Graph", () => {
       children: [],
     });
 
-    const forest = builder.build();
     expect(forest.getDag(id)).toEqual(dag);
     expect(forest.nodes.get(a)).toEqual("a");
   });
@@ -79,18 +78,17 @@ describe("DAG.findPath", () => {
 
 describe("DAG.findPartialPath", () => {
   it("simple", () => {
-    const builder = new DAGForestBuilder<string, number>();
-    const { dag: dag1, id: dagId1 } = builder.newDAG();
+    const forest = new DAGForest<string, number>();
+    const { dag: dag1, id: dagId1 } = forest.newDAG();
     const a1 = dag1.nodes.add("a1");
     const b1 = dag1.nodes.add("b1");
     const c1 = dag1.nodes.add("c1");
     const d1 = dag1.nodes.add("d1");
-    const { dag: dag2, id: dagId2 } = builder.newDAG();
+    const { dag: dag2, id: dagId2 } = forest.newDAG();
     const a2 = dag2.nodes.add("a2");
     const b2 = dag2.nodes.add("b2");
     const c2 = dag2.nodes.add("c2");
     const c3 = dag2.nodes.add("c3");
-    const forest = builder.build();
     forest.addEdge(dagId1, a1, b1, 0);
     forest.addEdge(dagId1, b1, c1, 0);
     forest.addEdge(dagId1, b1, d1, 0);
@@ -221,13 +219,12 @@ describe("DAG.findWaypointPath2", () => {
 });
 
 describe("advanced: find string", () => {
-  const builder = new DAGForestBuilder<string, number>();
-  const { id } = builder.newDAG();
-  const abc = builder.nodes.add("abc");
-  const def = builder.nodes.add("def");
-  const ghi = builder.nodes.add("ghi");
-  const jkl = builder.nodes.add("jkl");
-  const forest = builder.build();
+  const forest = new DAGForest<string, number>();
+  const { id } = forest.newDAG();
+  const abc = forest.nodes.add("abc");
+  const def = forest.nodes.add("def");
+  const ghi = forest.nodes.add("ghi");
+  const jkl = forest.nodes.add("jkl");
   forest.addEdge(id, abc, def, 0);
   forest.addEdge(id, def, ghi, 0);
   forest.addEdge(id, def, jkl, 0);

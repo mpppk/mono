@@ -199,30 +199,6 @@ export class DAG<Node, EdgeValue> {
   }
 }
 
-export class DAGForestBuilder<Node, EdgeValue> {
-  public dags: DAG<Node, EdgeValue>[] = [];
-  public build(): DAGForest<Node, EdgeValue> {
-    return new DAGForest(this.nodes, this.dags);
-  }
-
-  constructor(public nodes: Nodes<Node> = new Nodes()) {}
-
-  public addNode(node: Node): NodeID {
-    return this.nodes.add(node);
-  }
-
-  public addDAG(dag: DAG<Node, EdgeValue>): number {
-    this.dags.push(dag);
-    return this.dags.length - 1;
-  }
-
-  public newDAG(): { dag: DAG<Node, EdgeValue>; id: DagID } {
-    const dag = new DAG<Node, EdgeValue>(this.nodes);
-    this.addDAG(dag);
-    return { dag, id: DagID.new(this.dags.length - 1) };
-  }
-}
-
 export type FindPartialPathOp = "next" | "next-dag";
 type FindPartialPathResult = {
   path: NodeID[];
@@ -236,8 +212,8 @@ export type FindPartialPathMatcher<Node, EdgeValue> = (
 export class DAGForest<Node, EdgeValue> {
   private nodeDagMap: Map<NodeID, Set<DagID>> = new Map();
   constructor(
-    private _nodes: Nodes<Node>,
-    private _dags: DAG<Node, EdgeValue>[]
+    private _nodes: Nodes<Node> = new Nodes(),
+    private _dags: DAG<Node, EdgeValue>[] = []
   ) {}
   get nodes(): Nodes<Node> {
     return this._nodes;
@@ -263,6 +239,21 @@ export class DAGForest<Node, EdgeValue> {
   ): void {
     this.getDag(dagID).edges.add(from, to, value);
     addToSetMap(this.nodeDagMap, from, dagID);
+  }
+
+  public addNode(node: Node): NodeID {
+    return this.nodes.add(node);
+  }
+
+  public addDAG(dag: DAG<Node, EdgeValue>): number {
+    this.dags.push(dag);
+    return this.dags.length - 1;
+  }
+
+  public newDAG(): { dag: DAG<Node, EdgeValue>; id: DagID } {
+    const dag = new DAG<Node, EdgeValue>(this.nodes);
+    this.addDAG(dag);
+    return { dag, id: DagID.new(this.dags.length - 1) };
   }
 
   /**
