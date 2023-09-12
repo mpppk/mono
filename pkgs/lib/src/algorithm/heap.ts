@@ -40,7 +40,7 @@ export class Heap<T> {
   ) {}
 
   public clone(): Heap<T> {
-    const clone = new Heap(this.mapper);
+    const clone = new Heap(this.mapper, this.mode);
     clone._data = [...this._data];
     return clone;
   }

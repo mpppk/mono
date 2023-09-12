@@ -209,31 +209,59 @@ export type FindPartialPathMatcher<Node, EdgeValue> = (
   dag: DAG<Node, EdgeValue>
 ) => Generator<NodeID[], void>;
 
+type PrioritizedDag = {
+  dagId: DagID;
+  priority: number;
+};
+
+const newDagPriorityQueue = () => {
+  return new PriorityQueue<PrioritizedDag>((d) => d.priority, "desc");
+};
+
 class ForestDags<Node, EdgeValue> {
   private nodeDagMap: Map<NodeID, Set<DagID>> = new Map();
+  private priorityMap: Map<DagID, number> = new Map();
   private _dags: DAG<Node, EdgeValue>[] = [];
+  private readonly queue = newDagPriorityQueue();
   constructor(private nodes: Nodes<Node>) {}
 
   public get(id: DagID): DAG<Node, EdgeValue> {
     return this._dags[DagID.toNumber(id)];
   }
 
-  public getByNodeID(id: NodeID): Set<DagID> {
-    return this.nodeDagMap.get(id) ?? new Set();
+  /**
+   * 指定したノードを含むDAGのIDのリストを優先度順に返す
+   */
+  public listByNodeID(id: NodeID): DagID[] {
+    const s = this.nodeDagMap.get(id) ?? new Set();
+    const q = newDagPriorityQueue();
+    [...s].forEach((dagID) => {
+      q.push({ dagId: dagID, priority: this.priorityMap.get(dagID)! });
+    });
+    return q.popAll().map((d) => d.dagId);
   }
 
-  public add(dag: DAG<Node, EdgeValue>): DagID {
+  public add(dag: DAG<Node, EdgeValue>, priority = 0): DagID {
     this._dags.push(dag);
-    return DagID.new(this._dags.length - 1);
+    const dagId = DagID.new(this._dags.length - 1);
+    console.log("add", dagId, priority);
+    this.queue.push({ dagId, priority });
+    return dagId;
   }
 
-  public new(): { dag: DAG<Node, EdgeValue>; id: DagID } {
+  public new(priority = 0): { dag: DAG<Node, EdgeValue>; id: DagID } {
+    console.log("forest new");
     const dag = new DAG<Node, EdgeValue>(this.nodes);
-    return { dag, id: this.add(dag) };
+    return { dag, id: this.add(dag, priority) };
   }
 
-  public list(): DAG<Node, EdgeValue>[] {
-    return this._dags;
+  public *iterate() {
+    const q = this.queue.clone();
+    while (q.size() > 0) {
+      const { dagId } = q.pop();
+      console.log("dag id", dagId);
+      yield { dag: this.get(dagId), id: dagId };
+    }
   }
 
   public size(): number {
@@ -262,7 +290,7 @@ export class DagForest<Node, EdgeValue> {
   private readonly _edges: DagForestEdges<Node, EdgeValue>;
   constructor(
     private _nodes: Nodes<Node> = new Nodes(),
-    private _dags = new ForestDags<Node, EdgeValue>(_nodes) // private _dags: DAG<Node, EdgeValue>[] = []
+    private _dags = new ForestDags<Node, EdgeValue>(_nodes)
   ) {
     this._edges = new DagForestEdges(this._dags);
   }
@@ -287,7 +315,7 @@ export class DagForest<Node, EdgeValue> {
     // FIXME: nodeの取り出し順をいい感じにすると枝刈りもいい感じになるはず
     // いずれ訪問済みのdagをskipするopが必要になるかも
     for (const [nodeID] of this.nodes.nodes.entries()) {
-      const dagSet = this.dags.getByNodeID(nodeID);
+      const dagSet = this.dags.listByNodeID(nodeID);
       for (const dagID of dagSet) {
         const dag = this.dags.get(dagID);
         loop1: for (const path of matcher(nodeID, dag)) {
@@ -302,6 +330,17 @@ export class DagForest<Node, EdgeValue> {
               unreachable(op);
           }
         }
+      }
+    }
+  }
+
+  public *findWaypointPath(
+    waypoints: NonEmptyArray<NodeID>,
+    options: FindPathOptions<Node, EdgeValue> = defaultFindPathOptions()
+  ) {
+    for (const { dag, id } of this.dags.iterate()) {
+      for (const path of dag.findWaypointPath(waypoints, options)) {
+        yield { path, dagId: id };
       }
     }
   }

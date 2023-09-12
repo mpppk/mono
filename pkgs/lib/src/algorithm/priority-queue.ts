@@ -2,8 +2,8 @@ import { Heap } from "./heap";
 
 export class PriorityQueue<T> {
   private heap: Heap<T>;
-  constructor(mapper: (value: T) => number) {
-    this.heap = new Heap(mapper);
+  constructor(mapper: (value: T) => number, mode: "asc" | "desc" = "asc") {
+    this.heap = new Heap(mapper, mode);
   }
   public push(value: T) {
     this.heap.push(value);
@@ -17,11 +17,25 @@ export class PriorityQueue<T> {
     return el.data;
   }
 
+  public popAll(): T[] {
+    const ret = [];
+    while (this.heap.size() > 0) {
+      ret.push(this.pop());
+    }
+    return ret;
+  }
+
   public safePop(): T | null {
     return this.heap.pop()?.data ?? null;
   }
 
   public size(): number {
     return this.heap.size();
+  }
+
+  public clone(): PriorityQueue<T> {
+    const clone = new PriorityQueue(this.heap.mapper);
+    clone.heap = this.heap.clone();
+    return clone;
   }
 }

@@ -218,6 +218,25 @@ describe("DAG.findWaypointPath2", () => {
   });
 });
 
+describe("DagForest.findWaypointPath", () => {
+  it("should work", () => {
+    const forest = new DagForest<string, number>();
+    const { id: dag1 } = forest.dags.new();
+    const abc = forest.nodes.add("abc1");
+    const def = forest.nodes.add("def1");
+    forest.edges.add(dag1, abc, def, 0);
+
+    const { id: dag2 } = forest.dags.new(1);
+    forest.edges.add(dag2, abc, def, 0);
+
+    const paths = [...forest.findWaypointPath([abc])];
+    expect(paths).toEqual([
+      { dagId: dag2, path: { cost: 0, path: [abc, def] } },
+      { dagId: dag1, path: { cost: 0, path: [abc, def] } },
+    ]);
+  });
+});
+
 describe("advanced: find string", () => {
   const forest = new DagForest<string, number>();
   const { id } = forest.dags.new();
@@ -234,7 +253,7 @@ describe("advanced: find string", () => {
     const paths = [...forest.findPartialPath(finder.toMatcher("a"))];
     const matchedPaths: Path[] = [];
     for (const path of paths) {
-      for (const dag of forest.dags.list()) {
+      for (const { dag } of forest.dags.iterate()) {
         matchedPaths.push(
           ...[...dag.findWaypointPath(NonEmptyArray.parse(path.path))]
         );
@@ -251,7 +270,7 @@ describe("advanced: find string", () => {
     const paths = [...forest.findPartialPath(finder.toMatcher("abcd"))];
     const matchedPaths: Path[] = [];
     for (const path of paths) {
-      for (const dag of forest.dags.list()) {
+      for (const { dag } of forest.dags.iterate()) {
         matchedPaths.push(
           ...[...dag.findWaypointPath(NonEmptyArray.parse(path.path))]
         );
@@ -268,7 +287,7 @@ describe("advanced: find string", () => {
     const paths = [...forest.findPartialPath(finder.toMatcher("fj"))];
     const matchedPaths: Path[] = [];
     for (const path of paths) {
-      for (const dag of forest.dags.list()) {
+      for (const { dag } of forest.dags.iterate()) {
         matchedPaths.push(
           ...[...dag.findWaypointPath(NonEmptyArray.parse(path.path))]
         );
