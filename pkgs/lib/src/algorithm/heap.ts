@@ -22,9 +22,28 @@ const exists = <T>(node: Node<T> | NoExistNode): node is Node<T> => {
   return node.data !== null;
 };
 
+type NodeLeftPosition = 0;
+type NodeRootPosition = 1;
+type NodeRightPosition = 2;
+const NodePosition = Object.freeze({
+  left: 0 as NodeLeftPosition,
+  root: 1 as NodeRootPosition,
+  right: 2 as NodeRightPosition,
+});
+type NodePosition = (typeof NodePosition)[keyof typeof NodePosition];
+
 export class Heap<T> {
   private _data: T[] = [];
-  constructor(private mapper: (value: T) => number) {}
+  constructor(
+    public mapper: (value: T) => number,
+    private mode: "asc" | "desc" = "asc"
+  ) {}
+
+  public clone(): Heap<T> {
+    const clone = new Heap(this.mapper);
+    clone._data = [...this._data];
+    return clone;
+  }
 
   public root(): Node<T> | NoExistNode {
     return this.node(0);
@@ -54,37 +73,76 @@ export class Heap<T> {
     };
   }
 
+  private smallest(
+    base: Node<T>,
+    leftNode: Node<T> | NoExistNode,
+    rightNode: Node<T> | NoExistNode
+  ) {
+    let smallest = base;
+    let smallestNodePosition: NodePosition = NodePosition.root;
+    if (leftNode.value && leftNode.value < smallest.value) {
+      smallest = leftNode;
+      smallestNodePosition = NodePosition.left;
+    }
+    if (rightNode.value && rightNode.value < smallest.value) {
+      smallest = rightNode;
+      smallestNodePosition = NodePosition.right;
+    }
+    return { node: smallest, position: smallestNodePosition };
+  }
+
+  private largest(
+    base: Node<T>,
+    leftNode: Node<T> | NoExistNode,
+    rightNode: Node<T> | NoExistNode
+  ) {
+    let largest = base;
+    let largestNodePosition: NodePosition = NodePosition.root;
+    if (leftNode.value && leftNode.value > largest.value) {
+      largest = leftNode;
+      largestNodePosition = NodePosition.left;
+    }
+    if (rightNode.value && rightNode.value > largest.value) {
+      largest = rightNode;
+      largestNodePosition = NodePosition.right;
+    }
+    return { node: largest, position: largestNodePosition };
+  }
+
   private swap(index: number) {
     const base = this.node(index);
     if (!exists(base)) {
       return;
     }
-    let smallest = base;
-    let smallestNodeType: "root" | "left" | "right" = "root";
     const leftNode = this.left(index);
     const rightNode = this.right(index);
-    if (leftNode.value && leftNode.value < smallest.value) {
-      smallest = leftNode;
-      smallestNodeType = "left";
-    }
-    if (rightNode.value && rightNode.value < smallest.value) {
-      smallest = rightNode;
-      smallestNodeType = "right";
+    const target = (() => {
+      switch (this.mode) {
+        case "asc":
+          return this.smallest(base, leftNode, rightNode);
+        case "desc":
+          return this.largest(base, leftNode, rightNode);
+        default:
+          unreachable(this.mode);
+      }
+    })();
+    if (!target) {
+      return;
     }
     const root = this._data[index];
-    switch (smallestNodeType) {
-      case "root":
+    switch (target.position) {
+      case NodePosition.root:
         break;
-      case "left":
+      case NodePosition.left:
         this._data[leftNode.index] = root;
-        this._data[index] = smallest.data;
+        this._data[index] = target.node.data;
         break;
-      case "right":
+      case NodePosition.right:
         this._data[rightNode.index] = root;
-        this._data[index] = smallest.data;
+        this._data[index] = target.node.data;
         break;
       default:
-        unreachable(smallestNodeType);
+        unreachable(target.position);
     }
   }
 
