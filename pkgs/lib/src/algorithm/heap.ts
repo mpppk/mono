@@ -18,7 +18,9 @@ const newNoExistNode = (index: number): NoExistNode => ({
   index,
 });
 
-const exists = <T>(node: Node<T> | NoExistNode): node is Node<T> => {
+export const isNoExistNode = <T>(
+  node: Node<T> | NoExistNode
+): node is Node<T> => {
   return node.data !== null;
 };
 
@@ -63,7 +65,7 @@ export class Heap<T> {
 
   public node(index: number): Node<T> | NoExistNode {
     const data = this._data[index];
-    if (!data) {
+    if (data === undefined) {
       return newNoExistNode(index);
     }
     return {
@@ -111,17 +113,14 @@ export class Heap<T> {
 
   private swap(index: number) {
     const base = this.node(index);
-    if (!exists(base)) {
+    if (!isNoExistNode(base)) {
       return;
     }
     const leftNode = this.left(index);
     const rightNode = this.right(index);
-    console.log(this._data);
-    console.log("swap", base, leftNode, rightNode);
     const target = (() => {
       switch (this.mode) {
         case "asc":
-          console.log("smallest", this.smallest(base, leftNode, rightNode));
           return this.smallest(base, leftNode, rightNode);
         case "desc":
           return this.largest(base, leftNode, rightNode);
@@ -153,7 +152,6 @@ export class Heap<T> {
     for (let i = this._data.length >> 1; i >= 0; i--) {
       this.swap(i);
     }
-    console.log("build", this._data);
   }
 
   public push(data: T) {

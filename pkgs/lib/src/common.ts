@@ -45,3 +45,28 @@ export const NonEmptyArray = Object.freeze({
   },
 });
 export type TwoOrMoreArray<T> = [T, T, ...T[]];
+
+export const debugPrefix = Object.freeze({
+  root: "nbs",
+  lib: `nbs:lib`,
+  alg: "nbs:lib:alg",
+});
+
+export const uniqBy = <T, U>(arr: T[], fn: (v: T) => U): T[] => {
+  const set = new Set<U>();
+  return arr.filter((v) => {
+    const u = fn(v);
+    if (set.has(u)) {
+      return false;
+    } else {
+      set.add(u);
+      return true;
+    }
+  });
+};
+
+export const isPrimitive = (v: unknown): v is string | number | boolean => {
+  return (
+    typeof v === "string" || typeof v === "number" || typeof v === "boolean"
+  );
+};

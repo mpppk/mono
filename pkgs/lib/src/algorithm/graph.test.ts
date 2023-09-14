@@ -4,12 +4,13 @@ import {
   DagForest,
   FindPartialPathOp,
   FindPathOptions,
+  ForestFindWaypointsPathResult,
   NodeID,
   Nodes,
   Path,
 } from "./graph";
 import { StringFinder } from "./graph-string";
-import { NonEmptyArray } from "../common";
+import { NonEmptyArray, uniqBy } from "../common";
 
 describe("Graph", () => {
   it("should work", () => {
@@ -45,11 +46,11 @@ describe("DAG.findPath", () => {
   const c = dag.nodes.add("c");
   const d = dag.nodes.add("d");
   const e = dag.nodes.add("e");
-  dag.edges.add(a, b, 0);
-  dag.edges.add(b, c, 1);
-  dag.edges.add(b, d, 0);
-  dag.edges.add(c, e, 0);
-  dag.edges.add(d, e, 0);
+  dag.edges.add(a, b, 1);
+  dag.edges.add(b, c, 2);
+  dag.edges.add(b, d, 1);
+  dag.edges.add(c, e, 1);
+  dag.edges.add(d, e, 1);
   it("simple", () => {
     const paths: Path[] = [];
     const opt: FindPathOptions<string, number> = {
@@ -60,8 +61,8 @@ describe("DAG.findPath", () => {
       paths.push(path);
     }
     expect(paths).toEqual([
-      { path: [a, b, d, e], cost: 1 }, // cost = defaultCost
-      { path: [a, b, c, e], cost: 2 }, // cost = defaultCost + 1(b→c)
+      { path: [a, b, d, e], cost: 4 },
+      { path: [a, b, c, e], cost: 5 },
     ]);
   });
 
@@ -218,6 +219,29 @@ describe("DAG.findWaypointPath2", () => {
   });
 });
 
+describe("DAG.findWaypointPath cost", () => {
+  const dag = new DAG<string, number>(new Nodes());
+  const a = dag.nodes.add("a");
+  const b = dag.nodes.add("b");
+  const c = dag.nodes.add("c");
+  dag.edges.add(a, b, 1);
+  dag.edges.add(a, c, 0);
+
+  it("via a", () => {
+    const paths = [...dag.findWaypointPath([a], { costF: (e) => e.value })];
+    expect(paths).toEqual([
+      {
+        cost: 0,
+        path: [a, c],
+      },
+      {
+        cost: 1,
+        path: [a, b],
+      },
+    ]);
+  });
+});
+
 describe("DagForest.findWaypointPath", () => {
   it("should work", () => {
     const forest = new DagForest<string, number>();
@@ -294,5 +318,50 @@ describe("advanced: find string", () => {
       }
     }
     expect(matchedPaths).toEqual([{ path: [abc, def, jkl], cost: 0 }]);
+  });
+});
+
+describe("advanced: find string2", () => {
+  const forest = new DagForest<string, number>();
+  const { id: dag1 } = forest.dags.new();
+  const abc = forest.nodes.add("abc");
+  const def = forest.nodes.add("def");
+  const ghi = forest.nodes.add("ghi");
+  const jkl = forest.nodes.add("jkl");
+  forest.edges.add(dag1, abc, def, 0);
+  forest.edges.add(dag1, def, ghi, 1);
+  forest.edges.add(dag1, def, jkl, 0);
+  const { id: dag2 } = forest.dags.new();
+  forest.edges.add(dag2, abc, def, 1);
+  forest.edges.add(dag2, def, ghi, 2);
+  forest.edges.add(dag2, def, jkl, 0);
+  const { id: dag3 } = forest.dags.new(1);
+  forest.edges.add(dag3, abc, def, 1);
+  forest.edges.add(dag3, def, ghi, 2);
+  forest.edges.add(dag3, def, jkl, 0);
+
+  it("should work", () => {
+    const finder = new StringFinder();
+    const paths = [...forest.findPartialPath(finder.toMatcher("abcdef"))];
+    const paths2 = uniqBy(paths, (p) => p.path.join("/"));
+    const matchedPaths: unknown[] = [];
+    for (const path of paths2.values()) {
+      const p2 = [
+        ...forest.findWaypointPath(NonEmptyArray.parse(path.path), {
+          costF: (e) => e.value,
+        }),
+      ];
+      matchedPaths.push(p2);
+    }
+    expect(matchedPaths).toEqual([
+      [
+        { path: { path: [abc, def, jkl], cost: 1 }, dagId: dag3 },
+        { path: { path: [abc, def, ghi], cost: 3 }, dagId: dag3 },
+        { path: { path: [abc, def, jkl], cost: 1 }, dagId: dag2 },
+        { path: { path: [abc, def, ghi], cost: 3 }, dagId: dag2 },
+        { path: { path: [abc, def, jkl], cost: 0 }, dagId: dag1 },
+        { path: { path: [abc, def, ghi], cost: 1 }, dagId: dag1 },
+      ],
+    ] as ForestFindWaypointsPathResult[][]);
   });
 });

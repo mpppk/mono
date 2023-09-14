@@ -1,5 +1,13 @@
-import { PriorityQueue } from "./priority-queue";
-import { addToSetMap, NonEmptyArray, unreachable } from "../common";
+import { newPriorityQueueDebugger, PriorityQueue } from "./priority-queue";
+import {
+  addToSetMap,
+  debugPrefix,
+  NonEmptyArray,
+  unreachable,
+} from "../common";
+import createDebug from "debug";
+
+const debug = createDebug(debugPrefix.alg + ":dag");
 
 // eslint-disable-next-line @typescript-eslint/ban-types
 export interface NodeID extends Number {
@@ -68,6 +76,21 @@ class Edges<T> {
     const children = this.edges.get(from) ?? [];
     return { parent, children };
   }
+
+  public getValue(from: NodeID, to: NodeID): T {
+    const edges = this.edges.get(from) ?? [];
+    const edge = edges.find((e) => e.to === to);
+    if (!edge) {
+      throw new Error(`edge not found: ${from} -> ${to}`);
+    }
+    return edge.value;
+  }
+
+  public serialize() {
+    return {
+      children: [...this.edges.entries()],
+    };
+  }
 }
 
 type CostFunction<Node, EdgeValue> = (
@@ -78,14 +101,13 @@ export type FindPathOptions<Node, EdgeValue> = Readonly<{
   from?: NodeID;
   to?: NodeID;
   costF: CostFunction<Node, EdgeValue>;
-  defaultCost: number;
+  defaultCost?: number;
 }>;
 
 const defaultFindPathOptions = <Node, EdgeValue>(): FindPathOptions<
   Node,
   EdgeValue
 > => ({
-  defaultCost: 0,
   costF: () => 0,
 });
 export type Path = Readonly<{
@@ -134,6 +156,12 @@ export class DAG<Node, EdgeValue> {
     });
   }
 
+  public serialize() {
+    return {
+      edges: this.edges.serialize(),
+    };
+  }
+
   public *findWaypointPath(
     waypoints: NonEmptyArray<NodeID>,
     options: FindPathOptions<Node, EdgeValue> = defaultFindPathOptions()
@@ -143,13 +171,16 @@ export class DAG<Node, EdgeValue> {
     }
     const generators: ReturnType<typeof this.findPath>[] = [];
     const { from, to } = options;
-    generators.push(this.findPath({ from, to: waypoints[0], ...options }));
+    debug("first:findPath", { from, to: waypoints[0] });
+    generators.push(this.findPath({ ...options, from, to: waypoints[0] }));
     for (let i = 1; i < waypoints.length; i++) {
       const [from, to] = [waypoints[i - 1], waypoints[i]];
-      generators.push(this.findPath({ from, to, ...options }));
+      debug("second:findPath", { from, to: waypoints[0] });
+      generators.push(this.findPath({ ...options, from, to }));
     }
     const lastWaypoint = waypoints[waypoints.length - 1];
-    generators.push(this.findPath({ from: lastWaypoint, to, ...options }));
+    debug("last:findPath", { from: lastWaypoint, to });
+    generators.push(this.findPath({ ...options, from: lastWaypoint, to }));
     const f = function* (generators2: typeof generators): Generator<Path> {
       const generators3 = [...generators2];
       const g = generators3.shift();
@@ -175,14 +206,25 @@ export class DAG<Node, EdgeValue> {
   public *findPath(
     options: FindPathOptions<Node, EdgeValue> = defaultFindPathOptions()
   ) {
-    const queue = new PriorityQueue<Path>((p) => p.cost);
+    debug(`findPath:start from(${options.from}) to(${options.to})`);
+    const queue = new PriorityQueue<Path>(
+      (p) => p.cost,
+      "asc",
+      newPriorityQueueDebugger(debug)
+    );
     const from = options.from === undefined ? this.roots : [options.from];
     const to = options.to === undefined ? this.leafs : [options.to];
     for (const f of from) {
-      queue.push({ path: [f], cost: options.defaultCost });
+      debug(
+        "path:queued",
+        { path: [f], cost: options.defaultCost ?? 0 },
+        `${queue.size()} -> ${queue.size() + 1}`
+      );
+      queue.push({ path: [f], cost: options.defaultCost ?? 0 });
     }
     while (queue.size() > 0) {
       const path = queue.pop();
+      debug("path:popped", path, `${queue.size() + 1} -> ${queue.size()}`);
       const lastNode = path.path[path.path.length - 1];
       if (to.includes(lastNode)) {
         // これでいいんだっけ?
@@ -193,6 +235,14 @@ export class DAG<Node, EdgeValue> {
       const { children } = this.edges.get(lastNode);
       for (const child of children) {
         const cost = options.costF(child, this);
+        debug(
+          "path:queued",
+          {
+            path: [...path.path, child.to],
+            cost: path.cost + cost,
+          },
+          `${queue.size()} -> ${queue.size() + 1}`
+        );
         queue.push({ path: [...path.path, child.to], cost: path.cost + cost });
       }
     }
@@ -244,13 +294,11 @@ class ForestDags<Node, EdgeValue> {
   public add(dag: DAG<Node, EdgeValue>, priority = 0): DagID {
     this._dags.push(dag);
     const dagId = DagID.new(this._dags.length - 1);
-    console.log("add", dagId, priority);
     this.queue.push({ dagId, priority });
     return dagId;
   }
 
   public new(priority = 0): { dag: DAG<Node, EdgeValue>; id: DagID } {
-    console.log("forest new");
     const dag = new DAG<Node, EdgeValue>(this.nodes);
     return { dag, id: this.add(dag, priority) };
   }
@@ -259,7 +307,6 @@ class ForestDags<Node, EdgeValue> {
     const q = this.queue.clone();
     while (q.size() > 0) {
       const { dagId } = q.pop();
-      console.log("dag id", dagId);
       yield { dag: this.get(dagId), id: dagId };
     }
   }
@@ -278,6 +325,8 @@ class ForestDags<Node, EdgeValue> {
     addToSetMap(this.nodeDagMap, from, dagID);
   }
 }
+
+export type ForestFindWaypointsPathResult = { path: Path; dagId: DagID };
 
 class DagForestEdges<Node, EdgeValue> {
   constructor(private dags: ForestDags<Node, EdgeValue>) {}
@@ -304,6 +353,13 @@ export class DagForest<Node, EdgeValue> {
 
   get edges() {
     return this._edges;
+  }
+
+  public serialize() {
+    return {
+      nodes: [...this.nodes.nodes.entries()],
+      dags: [...this.dags.iterate()].map(({ dag }) => dag.serialize()),
+    };
   }
 
   /**
@@ -340,7 +396,7 @@ export class DagForest<Node, EdgeValue> {
   ) {
     for (const { dag, id } of this.dags.iterate()) {
       for (const path of dag.findWaypointPath(waypoints, options)) {
-        yield { path, dagId: id };
+        yield { path, dagId: id } as ForestFindWaypointsPathResult;
       }
     }
   }

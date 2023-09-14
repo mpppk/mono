@@ -15,6 +15,7 @@
   "author": "mpppk",
   "license": "ISC",
   "devDependencies": {
+    "@types/debug": "^4.1.8",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
     "@vitest/coverage-v8": "^0.34.3",
@@ -42,5 +43,8 @@
   },
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts"
+  "types": "./dist/index.d.ts",
+  "dependencies": {
+    "debug": "^4.3.4"
+  }
 }
