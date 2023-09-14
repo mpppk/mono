@@ -80,11 +80,11 @@ export class Heap<T> {
   ) {
     let smallest = base;
     let smallestNodePosition: NodePosition = NodePosition.root;
-    if (leftNode.value && leftNode.value < smallest.value) {
+    if (leftNode.value !== null && leftNode.value < smallest.value) {
       smallest = leftNode;
       smallestNodePosition = NodePosition.left;
     }
-    if (rightNode.value && rightNode.value < smallest.value) {
+    if (rightNode.value !== null && rightNode.value < smallest.value) {
       smallest = rightNode;
       smallestNodePosition = NodePosition.right;
     }
@@ -98,11 +98,11 @@ export class Heap<T> {
   ) {
     let largest = base;
     let largestNodePosition: NodePosition = NodePosition.root;
-    if (leftNode.value && leftNode.value > largest.value) {
+    if (leftNode.value !== null && leftNode.value > largest.value) {
       largest = leftNode;
       largestNodePosition = NodePosition.left;
     }
-    if (rightNode.value && rightNode.value > largest.value) {
+    if (rightNode.value !== null && rightNode.value > largest.value) {
       largest = rightNode;
       largestNodePosition = NodePosition.right;
     }
@@ -116,9 +116,12 @@ export class Heap<T> {
     }
     const leftNode = this.left(index);
     const rightNode = this.right(index);
+    console.log(this._data);
+    console.log("swap", base, leftNode, rightNode);
     const target = (() => {
       switch (this.mode) {
         case "asc":
+          console.log("smallest", this.smallest(base, leftNode, rightNode));
           return this.smallest(base, leftNode, rightNode);
         case "desc":
           return this.largest(base, leftNode, rightNode);
@@ -150,6 +153,7 @@ export class Heap<T> {
     for (let i = this._data.length >> 1; i >= 0; i--) {
       this.swap(i);
     }
+    console.log("build", this._data);
   }
 
   public push(data: T) {
