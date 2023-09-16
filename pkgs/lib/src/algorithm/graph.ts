@@ -207,9 +207,8 @@ export class DAG<Node, EdgeValue> {
     options: FindPathOptions<Node, EdgeValue> = defaultFindPathOptions()
   ) {
     debug(`findPath:start from(${options.from}) to(${options.to})`);
-    const queue = new PriorityQueue<Path>(
+    const queue = PriorityQueue.newAsc<Path>(
       (p) => p.cost,
-      "asc",
       newPriorityQueueDebugger(debug)
     );
     const from = options.from === undefined ? this.roots : [options.from];
@@ -252,7 +251,7 @@ export class DAG<Node, EdgeValue> {
 export type FindPartialPathOp = "next" | "next-dag";
 type FindPartialPathResult = {
   path: NodeID[];
-  dagID: DagID;
+  dagId: DagID;
 };
 export type FindPartialPathMatcher<Node, EdgeValue> = (
   nodeID: NodeID,
@@ -265,7 +264,7 @@ type PrioritizedDag = {
 };
 
 const newDagPriorityQueue = () => {
-  return new PriorityQueue<PrioritizedDag>((d) => d.priority, "desc");
+  return PriorityQueue.newDesc<PrioritizedDag>((d) => d.priority);
 };
 
 class ForestDags<Node, EdgeValue> {
@@ -277,6 +276,14 @@ class ForestDags<Node, EdgeValue> {
 
   public get(id: DagID): DAG<Node, EdgeValue> {
     return this._dags[DagID.toNumber(id)];
+  }
+
+  public getPriority(id: DagID): number {
+    const priority = this.priorityMap.get(id);
+    if (priority === undefined) {
+      throw new Error(`dag not found: ${id}`);
+    }
+    return priority;
   }
 
   /**
@@ -323,6 +330,20 @@ class ForestDags<Node, EdgeValue> {
   ): void {
     this.get(dagID).edges.add(from, to, value);
     addToSetMap(this.nodeDagMap, from, dagID);
+  }
+
+  public sortByPriority(nodes: NodeID[]): NodeID[] {
+    const queue = newDagPriorityQueue();
+    nodes
+      .map(
+        (id) =>
+          ({
+            dagId: id,
+            priority: this.getPriority(id),
+          } as PrioritizedDag)
+      )
+      .forEach((d) => queue.push(d));
+    return queue.popAll().map((d) => d.dagId);
   }
 }
 
@@ -375,7 +396,7 @@ export class DagForest<Node, EdgeValue> {
       for (const dagID of dagSet) {
         const dag = this.dags.get(dagID);
         loop1: for (const path of matcher(nodeID, dag)) {
-          const op = yield { path, dagID };
+          const op = yield { path, dagId: dagID };
           switch (op) {
             case "next":
             case undefined:
@@ -400,4 +421,46 @@ export class DagForest<Node, EdgeValue> {
       }
     }
   }
+
+  // public findPathByString(
+  //   query: string,
+  //   mapper: (n: Node) => string,
+  //   resultNum = 5,
+  //   costF: CostFunction<Node, EdgeValue>,
+  //   maxPriority: number
+  // ) {
+  //   const finder = new StringFinder<Node, EdgeValue>(mapper);
+  //   const pathQueue = new PriorityQueue<{
+  //     path: Path;
+  //     dagId: DagID;
+  //     priority: number;
+  //   }>(
+  //     (r) => r.path.cost,
+  //     "desc",
+  //     newPriorityQueueDebugger(debug, "pathQueue:")
+  //   );
+  //   debug("findPathByString", { query, resultNum });
+  //   for (const partialPath of this.findPartialPath(finder.toMatcher(query))) {
+  //     const dag = this.dags.get(partialPath.dagId);
+  //     for (const path of dag.findWaypointPath(
+  //       NonEmptyArray.parse(partialPath.path),
+  //       { costF }
+  //     )) {
+  //       // FIXME: 候補にならないresultはそもそもpushしない方が速い
+  //       pathQueue.push({
+  //         path,
+  //         dagId: partialPath.dagId,
+  //         priority: this.dags.getPriority(partialPath.dagId),
+  //       });
+  //       if (pathQueue.size() > resultNum) {
+  //         pathQueue.pop();
+  //       }
+  //       // Fixme: 0
+  //       // if (pathQueue.size() === resultNum && pathQueue.max() === 0) {
+  //       //   return pathQueue.popAll().reverse();
+  //       // }
+  //     }
+  //   }
+  //   return pathQueue.popAll().reverse();
+  // }
 }

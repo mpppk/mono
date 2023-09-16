@@ -1,4 +1,4 @@
-import { Heap } from "./heap";
+import { Heap, HeapCompareFunction } from "./heap";
 import createDebug from "debug";
 import { isPrimitive } from "../common";
 
@@ -14,27 +14,40 @@ const emptyPriorityQueueEventHandler: PriorityQueueEventHandler<any> = {
 };
 
 export const newPriorityQueueDebugger = <T>(
-  debug: createDebug.Debugger
+  debug: createDebug.Debugger,
+  name = ""
 ): PriorityQueueEventHandler<T> => ({
   popped: (value: T, queue: PriorityQueue<T>) => {
     const v = isPrimitive(value) ? value : JSON.stringify(value);
-    debug(`popped: ${v} (${queue.size() + 1}->${queue.size()})`);
+    debug(`${name}popped: ${v} (${queue.size() + 1}->${queue.size()})`);
   },
   queued: (value: T, queue: PriorityQueue<T>) => {
     const v = isPrimitive(value) ? value : JSON.stringify(value);
-    debug(`queued: ${v} (${queue.size() - 1}->${queue.size()})`);
+    debug(`${name}queued: ${v} (${queue.size() - 1}->${queue.size()})`);
   },
 });
 
 export class PriorityQueue<T> {
-  private heap: Heap<T>;
   constructor(
-    mapper: (value: T) => number,
-    mode: "asc" | "desc" = "asc",
-    private eventHandler: PriorityQueueEventHandler<T> = emptyPriorityQueueEventHandler
-  ) {
-    this.heap = new Heap(mapper, mode);
+    private sorter: HeapCompareFunction<T>,
+    private eventHandler: PriorityQueueEventHandler<T> = emptyPriorityQueueEventHandler,
+    private heap = new Heap(sorter)
+  ) {}
+
+  public static newAsc<T>(
+    mapper: (v: T) => number,
+    eventHandler: PriorityQueueEventHandler<T> = emptyPriorityQueueEventHandler
+  ): PriorityQueue<T> {
+    return new PriorityQueue((a, b) => mapper(a) - mapper(b), eventHandler);
   }
+
+  public static newDesc<T>(
+    mapper: (v: T) => number,
+    eventHandler: PriorityQueueEventHandler<T> = emptyPriorityQueueEventHandler
+  ): PriorityQueue<T> {
+    return new PriorityQueue((a, b) => mapper(b) - mapper(a), eventHandler);
+  }
+
   public push(value: T) {
     this.heap.push(value);
     this.eventHandler.queued(value, this);
@@ -65,9 +78,11 @@ export class PriorityQueue<T> {
     return this.heap.size();
   }
 
+  // public max(): number {
+  //   return this.heap.max();
+  // }
+
   public clone(): PriorityQueue<T> {
-    const clone = new PriorityQueue(this.heap.mapper);
-    clone.heap = this.heap.clone();
-    return clone;
+    return new PriorityQueue(this.sorter, this.eventHandler, this.heap.clone());
   }
 }

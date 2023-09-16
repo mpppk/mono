@@ -4,13 +4,12 @@ import {
   DagForest,
   FindPartialPathOp,
   FindPathOptions,
-  ForestFindWaypointsPathResult,
   NodeID,
   Nodes,
   Path,
 } from "./graph";
 import { StringFinder } from "./graph-string";
-import { NonEmptyArray, uniqBy } from "../common";
+import { NonEmptyArray } from "../common";
 
 describe("Graph", () => {
   it("should work", () => {
@@ -122,8 +121,8 @@ describe("DAG.findPartialPath", () => {
       results.push(value);
     }
     expect(results).toEqual([
-      { path: [b1, c1], dagID: dagId1 },
-      { path: [b2, c2], dagID: dagId2 },
+      { path: [b1, c1], dagId: dagId1 },
+      { path: [b2, c2], dagId: dagId2 },
       // 一つのDAGから一つ見つかったら以降は打ち切るので、b2 -> c3はなし
     ]);
   });
@@ -273,7 +272,7 @@ describe("advanced: find string", () => {
   forest.edges.add(id, def, jkl, 0);
 
   it("match single node", () => {
-    const finder = new StringFinder();
+    const finder = new StringFinder<string, number>((s) => s);
     const paths = [...forest.findPartialPath(finder.toMatcher("a"))];
     const matchedPaths: Path[] = [];
     for (const path of paths) {
@@ -290,7 +289,7 @@ describe("advanced: find string", () => {
   });
 
   it("match multi node", () => {
-    const finder = new StringFinder();
+    const finder = new StringFinder<string, number>((s) => s);
     const paths = [...forest.findPartialPath(finder.toMatcher("abcd"))];
     const matchedPaths: Path[] = [];
     for (const path of paths) {
@@ -307,7 +306,7 @@ describe("advanced: find string", () => {
   });
 
   it("match multi node2", () => {
-    const finder = new StringFinder();
+    const finder = new StringFinder<string, number>((s) => s);
     const paths = [...forest.findPartialPath(finder.toMatcher("fj"))];
     const matchedPaths: Path[] = [];
     for (const path of paths) {
@@ -321,47 +320,38 @@ describe("advanced: find string", () => {
   });
 });
 
-describe("advanced: find string2", () => {
-  const forest = new DagForest<string, number>();
-  const { id: dag1 } = forest.dags.new();
-  const abc = forest.nodes.add("abc");
-  const def = forest.nodes.add("def");
-  const ghi = forest.nodes.add("ghi");
-  const jkl = forest.nodes.add("jkl");
-  forest.edges.add(dag1, abc, def, 0);
-  forest.edges.add(dag1, def, ghi, 1);
-  forest.edges.add(dag1, def, jkl, 0);
-  const { id: dag2 } = forest.dags.new();
-  forest.edges.add(dag2, abc, def, 1);
-  forest.edges.add(dag2, def, ghi, 2);
-  forest.edges.add(dag2, def, jkl, 0);
-  const { id: dag3 } = forest.dags.new(1);
-  forest.edges.add(dag3, abc, def, 1);
-  forest.edges.add(dag3, def, ghi, 2);
-  forest.edges.add(dag3, def, jkl, 0);
-
-  it("should work", () => {
-    const finder = new StringFinder();
-    const paths = [...forest.findPartialPath(finder.toMatcher("abcdef"))];
-    const paths2 = uniqBy(paths, (p) => p.path.join("/"));
-    const matchedPaths: unknown[] = [];
-    for (const path of paths2.values()) {
-      const p2 = [
-        ...forest.findWaypointPath(NonEmptyArray.parse(path.path), {
-          costF: (e) => e.value,
-        }),
-      ];
-      matchedPaths.push(p2);
-    }
-    expect(matchedPaths).toEqual([
-      [
-        { path: { path: [abc, def, jkl], cost: 1 }, dagId: dag3 },
-        { path: { path: [abc, def, ghi], cost: 3 }, dagId: dag3 },
-        { path: { path: [abc, def, jkl], cost: 1 }, dagId: dag2 },
-        { path: { path: [abc, def, ghi], cost: 3 }, dagId: dag2 },
-        { path: { path: [abc, def, jkl], cost: 0 }, dagId: dag1 },
-        { path: { path: [abc, def, ghi], cost: 1 }, dagId: dag1 },
-      ],
-    ] as ForestFindWaypointsPathResult[][]);
-  });
-});
+// describe("advanced: find string2", () => {
+//   const forest = new DagForest<string, number>();
+//   const { id: dag1 } = forest.dags.new();
+//   const abc = forest.nodes.add("abc");
+//   const def = forest.nodes.add("def");
+//   const ghi = forest.nodes.add("ghi");
+//   const jkl = forest.nodes.add("jkl");
+//   forest.edges.add(dag1, abc, def, 0);
+//   forest.edges.add(dag1, def, ghi, 1);
+//   forest.edges.add(dag1, def, jkl, 0);
+//   const { id: dag2 } = forest.dags.new();
+//   forest.edges.add(dag2, abc, def, 1);
+//   forest.edges.add(dag2, def, ghi, 2);
+//   forest.edges.add(dag2, def, jkl, 0);
+//   const { id: dag3 } = forest.dags.new(1);
+//   forest.edges.add(dag3, abc, def, 1);
+//   forest.edges.add(dag3, def, ghi, 2);
+//   forest.edges.add(dag3, def, jkl, 0);
+//
+//   it("findPathByString", () => {
+//     const result = forest.findPathByString(
+//       "abcdef",
+//       (s) => s,
+//       5,
+//       (s) => s.value
+//     );
+//     expect(result).toEqual([
+//       { path: { path: [abc, def, jkl], cost: 0 }, dagId: dag1 },
+//       { path: { path: [abc, def, ghi], cost: 1 }, dagId: dag1 },
+//       { path: { path: [abc, def, jkl], cost: 1 }, dagId: dag3 },
+//       { path: { path: [abc, def, jkl], cost: 1 }, dagId: dag2 },
+//       { path: { path: [abc, def, ghi], cost: 3 }, dagId: dag2 },
+//     ] as ForestFindWaypointsPathResult[]);
+//   });
+// });

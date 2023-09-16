@@ -39,16 +39,19 @@ export type DagStrRange = {
 };
 export type DagStrPrefix = Omit<DagStrRange, "startPos">;
 
-export class StringFinder {
+export class StringFinder<Node, EdgeValue> {
   private readonly charsMap = new CharsMap<NodeID>();
-  constructor() {}
+  constructor(private mapper: (node: Node) => string) {}
 
-  public *findFromNode<EdgeValue>(
+  public *findFromNode(
     nodeID: NodeID,
-    dag: DAG<string, EdgeValue>,
+    dag: DAG<Node, EdgeValue>,
     query: string
   ): Generator<DagStrRange, undefined> {
-    const targetChars = this.charsMap.add(nodeID, dag.nodes.get(nodeID)!);
+    const targetChars = this.charsMap.add(
+      nodeID,
+      this.mapper(dag.nodes.get(nodeID)!)
+    );
     const { target: tRes, remainQueryStartPos } = findFromChars(
       targetChars,
       Char.fromString(query)
@@ -85,15 +88,15 @@ export class StringFinder {
     return;
   }
 
-  public *startWithFromNode<EdgeValue>(
+  public *startWithFromNode(
     path: NonEmptyArray<NodeID>,
-    dag: DAG<string, EdgeValue>,
+    dag: DAG<Node, EdgeValue>,
     query: string
   ): Generator<DagStrPrefix> {
     // nodeIDのノードで完結するケース
     const nodeID = path[path.length - 1];
     const node = dag.nodes.get(nodeID)!;
-    this.charsMap.add(nodeID, node);
+    this.charsMap.add(nodeID, this.mapper(node));
     const nodeStr = this.charsMap.getStr(nodeID)!;
     if (nodeStr.startsWith(query)) {
       yield {
@@ -119,9 +122,7 @@ export class StringFinder {
     }
   }
 
-  public toMatcher<EdgeValue>(
-    query: string
-  ): FindPartialPathMatcher<string, EdgeValue> {
+  public toMatcher(query: string): FindPartialPathMatcher<Node, EdgeValue> {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const finder = this;
     return function* (nodeID, dag) {

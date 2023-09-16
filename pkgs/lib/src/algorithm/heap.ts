@@ -23,7 +23,16 @@ export type HeapCompareFunction<T> = (a: T, b: T) => number;
 
 export class Heap<T> {
   private _data: T[] = [];
+
   constructor(private sorter: HeapCompareFunction<T>) {}
+
+  public static newAsc<T>(mapper: (v: T) => number): Heap<T> {
+    return new Heap((a, b) => mapper(a) - mapper(b));
+  }
+
+  public static newDesc<T>(mapper: (v: T) => number): Heap<T> {
+    return new Heap((a, b) => mapper(b) - mapper(a));
+  }
 
   public clone(): Heap<T> {
     const clone = new Heap(this.sorter);
