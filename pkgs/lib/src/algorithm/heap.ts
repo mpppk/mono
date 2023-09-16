@@ -1,5 +1,3 @@
-import { unreachable } from "../common";
-
 type Node<T> = {
   data: T;
   value: number;
@@ -34,11 +32,13 @@ const NodePosition = Object.freeze({
 });
 type NodePosition = (typeof NodePosition)[keyof typeof NodePosition];
 
+export type HeapCompareFunction<T> = (a: Node<T>, b: Node<T>) => number;
+
 export class Heap<T> {
   private _data: T[] = [];
   constructor(
     public mapper: (value: T) => number,
-    private mode: "asc" | "desc" = "asc"
+    private mode: "asc" | "desc" | HeapCompareFunction<T> = "asc"
   ) {}
 
   public clone(): Heap<T> {
@@ -118,33 +118,24 @@ export class Heap<T> {
     }
     const leftNode = this.left(index);
     const rightNode = this.right(index);
-    const target = (() => {
+    const compare: HeapCompareFunction<T> = (() => {
       switch (this.mode) {
         case "asc":
-          return this.smallest(base, leftNode, rightNode);
+          return (a: Node<T>, b: Node<T>) => a.value - b.value;
         case "desc":
-          return this.largest(base, leftNode, rightNode);
+          return (a: Node<T>, b: Node<T>) => b.value - a.value;
         default:
-          unreachable(this.mode);
+          return this.mode;
       }
     })();
-    if (!target) {
-      return;
-    }
     const root = this._data[index];
-    switch (target.position) {
-      case NodePosition.root:
-        break;
-      case NodePosition.left:
-        this._data[leftNode.index] = root;
-        this._data[index] = target.node.data;
-        break;
-      case NodePosition.right:
-        this._data[rightNode.index] = root;
-        this._data[index] = target.node.data;
-        break;
-      default:
-        unreachable(target.position);
+    if (leftNode.value !== null && compare(leftNode, base) < 0) {
+      this._data[leftNode.index] = root;
+      this._data[index] = leftNode.data;
+    }
+    if (rightNode.value !== null && compare(rightNode, base) < 0) {
+      this._data[rightNode.index] = root;
+      this._data[index] = rightNode.data;
     }
   }
 
@@ -175,5 +166,13 @@ export class Heap<T> {
 
   public size(): number {
     return this._data.length;
+  }
+
+  public max(): number {
+    // FIXME: ナイーブな実装
+    return this._data.reduce(
+      (acc, cur) => Math.max(acc, this.mapper(cur)),
+      -Infinity
+    );
   }
 }
