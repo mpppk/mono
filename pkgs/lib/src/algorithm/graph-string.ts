@@ -1,4 +1,4 @@
-import { DAG, FindPartialPathMatcher, NodeID } from "./graph";
+import { DAG, FindPartialPathMatcher } from "./graph";
 import { NonEmptyArray, unreachable } from "../common";
 import { Char, CharsMap } from "../char";
 import {
@@ -8,6 +8,7 @@ import {
   StrPos,
   StrRange,
 } from "./string";
+import { NodeID } from "./values";
 
 export type FindStrResult =
   | {

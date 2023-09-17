@@ -8,27 +8,9 @@ import {
 import createDebug from "debug";
 import { StringFinder } from "./graph-string";
 import { HeapCompareFunction } from "./heap";
+import { DagID, NodeID } from "./values";
 
 const debug = createDebug(debugPrefix.alg + ":dag");
-
-// eslint-disable-next-line @typescript-eslint/ban-types
-export interface NodeID extends Number {
-  _nodeIDBrand: never;
-}
-export const NodeID = Object.freeze({
-  new: (n: number): NodeID => n as unknown as NodeID,
-  fromArray: (n: number[]): NodeID[] => n.map((v) => NodeID.new(v)),
-  toNumber: (id: NodeID): number => id as unknown as number,
-});
-
-// eslint-disable-next-line @typescript-eslint/ban-types
-export interface DagID extends Number {
-  _nodeIDBrand: never;
-}
-export const DagID = Object.freeze({
-  new: (n: number): DagID => n as unknown as DagID,
-  toNumber: (id: DagID): number => id as unknown as number,
-});
 
 export class Nodes<T> {
   constructor(private toHex: (n: T) => string = (n) => String(n)) {}

@@ -2,13 +2,11 @@ import { describe, it, expect } from "vitest";
 import {
   DAG,
   DagForest,
-  DagID,
   DagPriorityMap,
   FindPartialPathOp,
   FindPathCandidate,
   FindPathOptions,
   ForestFindWaypointsPathResult,
-  NodeID,
   Nodes,
   Path,
   VisitedForestPathMap,
@@ -16,6 +14,7 @@ import {
 } from "./graph";
 import { StringFinder } from "./graph-string";
 import { NonEmptyArray } from "../common";
+import { DagID, NodeID } from "./values";
 
 describe("Graph", () => {
   it("should work", () => {
