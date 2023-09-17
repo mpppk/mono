@@ -68,19 +68,19 @@ export class Heap<T> {
   }
 
   private swap(index: number) {
-    const base = this.node(index);
+    let base = this.node(index);
     if (!isNoExistNode(base)) {
       return;
     }
     const leftNode = this.left(index);
     const rightNode = this.right(index);
-    const root = this._data[index];
     if (leftNode.data !== null && this.sorter(leftNode.data, base.data) < 0) {
-      this._data[leftNode.index] = root;
+      this._data[leftNode.index] = base.data;
       this._data[index] = leftNode.data;
+      base = leftNode as Node<T>;
     }
     if (rightNode.data !== null && this.sorter(rightNode.data, base.data) < 0) {
-      this._data[rightNode.index] = root;
+      this._data[rightNode.index] = base.data;
       this._data[index] = rightNode.data;
     }
   }

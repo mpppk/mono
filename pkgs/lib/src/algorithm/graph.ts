@@ -6,6 +6,8 @@ import {
   unreachable,
 } from "../common";
 import createDebug from "debug";
+import { StringFinder } from "./graph-string";
+import { HeapCompareFunction } from "./heap";
 
 const debug = createDebug(debugPrefix.alg + ":dag");
 
@@ -13,8 +15,9 @@ const debug = createDebug(debugPrefix.alg + ":dag");
 export interface NodeID extends Number {
   _nodeIDBrand: never;
 }
-const NodeID = Object.freeze({
+export const NodeID = Object.freeze({
   new: (n: number): NodeID => n as unknown as NodeID,
+  fromArray: (n: number[]): NodeID[] => n.map((v) => NodeID.new(v)),
   toNumber: (id: NodeID): number => id as unknown as number,
 });
 
@@ -267,11 +270,38 @@ const newDagPriorityQueue = () => {
   return PriorityQueue.newDesc<PrioritizedDag>((d) => d.priority);
 };
 
+export class DagPriorityMap {
+  private readonly m: Map<DagID, number> = new Map();
+  private readonly queue = newDagPriorityQueue();
+
+  public set(id: DagID, priority: number) {
+    if (this.m.has(id)) {
+      throw new Error(`dag already exists: ${id}`);
+    }
+    this.m.set(id, priority);
+    this.queue.push({ dagId: id, priority });
+  }
+
+  public get(id: DagID): number {
+    const priority = this.m.get(id);
+    if (priority === undefined) {
+      throw new Error(`dag not found: ${id}`);
+    }
+    return priority;
+  }
+
+  public *iterate() {
+    const q = this.queue.clone();
+    while (q.size() > 0) {
+      yield q.pop();
+    }
+  }
+}
+
 class ForestDags<Node, EdgeValue> {
   private nodeDagMap: Map<NodeID, Set<DagID>> = new Map();
-  private priorityMap: Map<DagID, number> = new Map();
+  public priorityMap: DagPriorityMap = new DagPriorityMap();
   private _dags: DAG<Node, EdgeValue>[] = [];
-  private readonly queue = newDagPriorityQueue();
   constructor(private nodes: Nodes<Node>) {}
 
   public get(id: DagID): DAG<Node, EdgeValue> {
@@ -301,7 +331,7 @@ class ForestDags<Node, EdgeValue> {
   public add(dag: DAG<Node, EdgeValue>, priority = 0): DagID {
     this._dags.push(dag);
     const dagId = DagID.new(this._dags.length - 1);
-    this.queue.push({ dagId, priority });
+    this.priorityMap.set(dagId, priority);
     return dagId;
   }
 
@@ -311,9 +341,7 @@ class ForestDags<Node, EdgeValue> {
   }
 
   public *iterate() {
-    const q = this.queue.clone();
-    while (q.size() > 0) {
-      const { dagId } = q.pop();
+    for (const { dagId } of this.priorityMap.iterate()) {
       yield { dag: this.get(dagId), id: dagId };
     }
   }
@@ -347,12 +375,90 @@ class ForestDags<Node, EdgeValue> {
   }
 }
 
-export type ForestFindWaypointsPathResult = { path: Path; dagId: DagID };
+export type ForestFindWaypointsPathResult = {
+  path: Path;
+  dagId: DagID;
+  priority: number;
+};
 
 class DagForestEdges<Node, EdgeValue> {
   constructor(private dags: ForestDags<Node, EdgeValue>) {}
   public add(dagID: DagID, from: NodeID, to: NodeID, value: EdgeValue): void {
     this.dags.addEdge(dagID, from, to, value);
+  }
+}
+
+export type FindPathCandidate = {
+  path: Path;
+  dagId: DagID;
+};
+
+class VisitedPathMap {
+  private readonly m = new Map<string, NodeID[]>();
+  public get(path: NodeID[]): NodeID[] | undefined {
+    const key = path.join(",");
+    return this.m.get(key);
+  }
+  public set(path: NodeID[]): void {
+    const key = path.join(",");
+    this.m.set(key, path);
+  }
+}
+
+export class VisitedForestPathMap {
+  private readonly m = new Map<DagID, VisitedPathMap>();
+  public get(dagId: DagID): VisitedPathMap {
+    if (!this.m.has(dagId)) {
+      this.m.set(dagId, new VisitedPathMap());
+    }
+    return this.m.get(dagId)!;
+  }
+
+  public set(dagId: DagID, path: NodeID[]): void {
+    this.get(dagId).set(path);
+  }
+
+  public has(dagId: DagID, path: NodeID[]): boolean {
+    return this.get(dagId).get(path) !== undefined;
+  }
+}
+
+export class VisitedForestPathQueue {
+  private readonly m = new VisitedForestPathMap();
+  private readonly queue: PriorityQueue<FindPathCandidate>;
+
+  constructor(priorityMap: DagPriorityMap, private maxSize: number) {
+    const sorter: HeapCompareFunction<FindPathCandidate> = (a, b) => {
+      // costが大きい方が優先度が高い(=costが小さいものほどqueueに残りやすくなる)
+      if (a.path.cost !== b.path.cost) {
+        return b.path.cost - a.path.cost;
+      }
+      // costが同じであれば、priorityが低い方が優先度が高い(=priorityが高いものほどqueueに残りやすくなる)
+
+      const aPriority = priorityMap.get(a.dagId);
+      const bPriority = priorityMap.get(b.dagId);
+      return aPriority - bPriority;
+    };
+    this.queue = new PriorityQueue<FindPathCandidate>(
+      sorter,
+      newPriorityQueueDebugger(debug, "pathQueue:")
+    );
+  }
+
+  public push(dagId: DagID, path: Path): void {
+    if (this.m.has(dagId, path.path)) {
+      debug("skip", dagId, path.path);
+      return;
+    }
+    this.queue.push({ dagId, path });
+    this.m.set(dagId, path.path);
+    if (this.queue.size() > this.maxSize) {
+      this.queue.pop();
+    }
+  }
+
+  public popAll(): FindPathCandidate[] {
+    return this.queue.popAll().reverse();
   }
 }
 
@@ -422,45 +528,29 @@ export class DagForest<Node, EdgeValue> {
     }
   }
 
-  // public findPathByString(
-  //   query: string,
-  //   mapper: (n: Node) => string,
-  //   resultNum = 5,
-  //   costF: CostFunction<Node, EdgeValue>,
-  //   maxPriority: number
-  // ) {
-  //   const finder = new StringFinder<Node, EdgeValue>(mapper);
-  //   const pathQueue = new PriorityQueue<{
-  //     path: Path;
-  //     dagId: DagID;
-  //     priority: number;
-  //   }>(
-  //     (r) => r.path.cost,
-  //     "desc",
-  //     newPriorityQueueDebugger(debug, "pathQueue:")
-  //   );
-  //   debug("findPathByString", { query, resultNum });
-  //   for (const partialPath of this.findPartialPath(finder.toMatcher(query))) {
-  //     const dag = this.dags.get(partialPath.dagId);
-  //     for (const path of dag.findWaypointPath(
-  //       NonEmptyArray.parse(partialPath.path),
-  //       { costF }
-  //     )) {
-  //       // FIXME: 候補にならないresultはそもそもpushしない方が速い
-  //       pathQueue.push({
-  //         path,
-  //         dagId: partialPath.dagId,
-  //         priority: this.dags.getPriority(partialPath.dagId),
-  //       });
-  //       if (pathQueue.size() > resultNum) {
-  //         pathQueue.pop();
-  //       }
-  //       // Fixme: 0
-  //       // if (pathQueue.size() === resultNum && pathQueue.max() === 0) {
-  //       //   return pathQueue.popAll().reverse();
-  //       // }
-  //     }
-  //   }
-  //   return pathQueue.popAll().reverse();
-  // }
+  public findPathByString(
+    query: string,
+    mapper: (n: Node) => string,
+    resultNum = 5,
+    costF: CostFunction<Node, EdgeValue>
+    // maxPriority: number
+  ) {
+    const finder = new StringFinder<Node, EdgeValue>(mapper);
+    // queueに残したい候補のpriorityを下げる
+
+    const visitedQueue = new VisitedForestPathQueue(this.dags.priorityMap, 5);
+    debug("findPathByString", { query, resultNum });
+    for (const partialPath of this.findPartialPath(finder.toMatcher(query))) {
+      const dag = this.dags.get(partialPath.dagId);
+      for (const path of dag.findWaypointPath(
+        NonEmptyArray.parse(partialPath.path),
+        { costF }
+      )) {
+        visitedQueue.push(partialPath.dagId, path);
+      }
+    }
+    const r = visitedQueue.popAll();
+    console.log("r", JSON.stringify(r, null));
+    return r;
+  }
 }
