@@ -1,4 +1,4 @@
-import { FindPartialPathMatcher } from "./graph";
+import { FindPartialPathMatcher } from "./dag-forest";
 import { NonEmptyArray, unreachable } from "../common";
 import { Char, CharsMap } from "../char";
 import {

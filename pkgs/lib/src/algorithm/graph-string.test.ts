@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { StringFinder } from "./graph-string";
-import { DagForest } from "./graph";
+import { DagForest } from "./dag-forest";
 import { DAG } from "./dag";
 
 describe("StringFinder.findFromDag", () => {
