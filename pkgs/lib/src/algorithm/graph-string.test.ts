@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { StringFinder } from "./graph-string";
-import { DAG, DagForest } from "./graph";
+import { DagForest } from "./graph";
+import { DAG } from "./dag";
 
 describe("StringFinder.findFromDag", () => {
   describe("serial dag", () => {
