@@ -216,7 +216,6 @@ export class VisitedForestPathQueue {
 
   public push(dagId: DagID, path: Path): void {
     if (this.m.has(dagId, path.path)) {
-      debug("skip", dagId, path.path);
       return;
     }
     this.queue.push({ dagId, path });
@@ -319,7 +318,6 @@ export class DagForest<Node, EdgeValue> {
       }
     }
     const r = visitedQueue.popAll();
-    console.log("r", JSON.stringify(r, null));
     return r;
   }
 }
