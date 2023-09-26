@@ -1,5 +1,6 @@
 import { loadEnv } from "./env";
-import { loadAsanaCsv, writeCsvFile } from "./csv";
+import { ExtendedAsanaRow, loadAsanaCsv } from "./csv";
+import { addToListMap } from "@mpppk/lib";
 
 const main = async () => {
   const env = loadEnv();
@@ -14,13 +15,12 @@ const main = async () => {
     return link.replaceAll("%2F", "/").replaceAll("_", " ");
   };
 
-  const rows = csv.data
+  const rows: ExtendedAsanaRow[] = csv.data
     .filter((row) => {
-      const completedAtStr = row["Completed At"];
-      if (completedAtStr === "") {
+      const completedAt = row["Completed At"];
+      if (completedAt === null) {
         return false;
       }
-      const completedAt = new Date(completedAtStr);
       return (
         completedAt > new Date("2023-08-01") &&
         completedAt < new Date("2023-09-01")
@@ -40,7 +40,13 @@ const main = async () => {
     const t2f = t2.replaceAll(" ", "_").replaceAll("　", "_");
     return t1f === t2f;
   };
-  const sbText = rows.map((row) => {
+
+  const rowGroups = rows.reduce((acc, row) => {
+    addToListMap(acc, row["Section/Column"], row);
+    return acc;
+  }, new Map<string, ExtendedAsanaRow[]>());
+
+  const rowToSBLine = (row: ExtendedAsanaRow) => {
     if (row["Scrapbox"] === "") {
       return `Asana:[${row.Name} ${toAsanaUrl(row["Task ID"])}]`;
     }
@@ -48,9 +54,16 @@ const main = async () => {
       return `[${row.link}]([Asana ${toAsanaUrl(row["Task ID"])}])`;
     }
     return `[${row.link}](Asana:[${row.Name} ${toAsanaUrl(row["Task ID"])}])`;
-  });
-  console.log(sbText.join("\n"));
-  console.log(await writeCsvFile(rows, "./out.csv"));
+  };
+
+  const sbLines: string[] = [];
+  for (const [section, rows] of rowGroups.entries()) {
+    sbLines.push(`[* ${section === "" ? "その他" : section}]`);
+    sbLines.push(...rows.map(rowToSBLine));
+    sbLines.push("");
+  }
+
+  console.log(sbLines.join("\n"));
 };
 
 main();

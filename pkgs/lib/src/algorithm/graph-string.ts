@@ -1,4 +1,4 @@
-import { DAG, FindPartialPathMatcher, NodeID } from "./graph";
+import { FindPartialPathMatcher } from "./dag-forest";
 import { NonEmptyArray, unreachable } from "../common";
 import { Char, CharsMap } from "../char";
 import {
@@ -8,6 +8,8 @@ import {
   StrPos,
   StrRange,
 } from "./string";
+import { NodeID } from "./values";
+import { DAG } from "./dag";
 
 export type FindStrResult =
   | {
@@ -39,16 +41,19 @@ export type DagStrRange = {
 };
 export type DagStrPrefix = Omit<DagStrRange, "startPos">;
 
-export class StringFinder {
+export class StringFinder<Node, EdgeValue> {
   private readonly charsMap = new CharsMap<NodeID>();
-  constructor() {}
+  constructor(private mapper: (node: Node) => string) {}
 
-  public *findFromDag<EdgeValue>(
+  public *findFromNode(
     nodeID: NodeID,
-    dag: DAG<string, EdgeValue>,
+    dag: DAG<Node, EdgeValue>,
     query: string
   ): Generator<DagStrRange, undefined> {
-    const targetChars = this.charsMap.add(nodeID, dag.nodes.get(nodeID)!);
+    const targetChars = this.charsMap.add(
+      nodeID,
+      this.mapper(dag.nodes.get(nodeID)!)
+    );
     const { target: tRes, remainQueryStartPos } = findFromChars(
       targetChars,
       Char.fromString(query)
@@ -74,7 +79,7 @@ export class StringFinder {
     const remainQuery = query.slice(StrPos.toNumber(remainQueryStartPos!));
     const children = (dag.edges.get(nodeID) ?? []).children.map((c) => c.to);
     for (const child of children) {
-      for (const result of this.startWithFromDag([child], dag, remainQuery)) {
+      for (const result of this.startWithFromNode([child], dag, remainQuery)) {
         yield {
           path: [nodeID, ...result.path],
           startPos: tRes.startPos,
@@ -85,15 +90,15 @@ export class StringFinder {
     return;
   }
 
-  public *startWithFromDag<EdgeValue>(
+  public *startWithFromNode(
     path: NonEmptyArray<NodeID>,
-    dag: DAG<string, EdgeValue>,
+    dag: DAG<Node, EdgeValue>,
     query: string
   ): Generator<DagStrPrefix> {
     // nodeIDのノードで完結するケース
     const nodeID = path[path.length - 1];
     const node = dag.nodes.get(nodeID)!;
-    this.charsMap.add(nodeID, node);
+    this.charsMap.add(nodeID, this.mapper(node));
     const nodeStr = this.charsMap.getStr(nodeID)!;
     if (nodeStr.startsWith(query)) {
       yield {
@@ -111,7 +116,7 @@ export class StringFinder {
     // nodeIDのノードで完結しないケース
     const children = (dag.edges.get(nodeID) ?? []).children.map((c) => c.to);
     for (const child of children) {
-      yield* this.startWithFromDag(
+      yield* this.startWithFromNode(
         [...path, child],
         dag,
         query.slice(nodeStr.length)
@@ -119,13 +124,11 @@ export class StringFinder {
     }
   }
 
-  public toMatcher<EdgeValue>(
-    query: string
-  ): FindPartialPathMatcher<string, EdgeValue> {
+  public toMatcher(query: string): FindPartialPathMatcher<Node, EdgeValue> {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const finder = this;
     return function* (nodeID, dag) {
-      for (const range of finder.findFromDag(nodeID, dag, query)) {
+      for (const range of finder.findFromNode(nodeID, dag, query)) {
         yield range.path;
       }
     };

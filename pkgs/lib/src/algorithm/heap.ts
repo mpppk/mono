@@ -1,30 +1,44 @@
-import { unreachable } from "../common";
-
 type Node<T> = {
   data: T;
-  value: number;
   index: number;
 };
 
 type NoExistNode = {
   data: null;
-  value: null;
   index: number;
 };
 
 const newNoExistNode = (index: number): NoExistNode => ({
   data: null,
-  value: null,
   index,
 });
 
-const exists = <T>(node: Node<T> | NoExistNode): node is Node<T> => {
+export const isNoExistNode = <T>(
+  node: Node<T> | NoExistNode
+): node is Node<T> => {
   return node.data !== null;
 };
 
+export type HeapCompareFunction<T> = (a: T, b: T) => number;
+
 export class Heap<T> {
   private _data: T[] = [];
-  constructor(private mapper: (value: T) => number) {}
+
+  constructor(private sorter: HeapCompareFunction<T>) {}
+
+  public static newAsc<T>(mapper: (v: T) => number): Heap<T> {
+    return new Heap((a, b) => mapper(a) - mapper(b));
+  }
+
+  public static newDesc<T>(mapper: (v: T) => number): Heap<T> {
+    return new Heap((a, b) => mapper(b) - mapper(a));
+  }
+
+  public clone(): Heap<T> {
+    const clone = new Heap(this.sorter);
+    clone._data = [...this._data];
+    return clone;
+  }
 
   public root(): Node<T> | NoExistNode {
     return this.node(0);
@@ -44,47 +58,30 @@ export class Heap<T> {
 
   public node(index: number): Node<T> | NoExistNode {
     const data = this._data[index];
-    if (!data) {
+    if (data === undefined) {
       return newNoExistNode(index);
     }
     return {
       data,
-      value: this.mapper(data),
       index,
     };
   }
 
   private swap(index: number) {
-    const base = this.node(index);
-    if (!exists(base)) {
+    let base = this.node(index);
+    if (!isNoExistNode(base)) {
       return;
     }
-    let smallest = base;
-    let smallestNodeType: "root" | "left" | "right" = "root";
     const leftNode = this.left(index);
     const rightNode = this.right(index);
-    if (leftNode.value && leftNode.value < smallest.value) {
-      smallest = leftNode;
-      smallestNodeType = "left";
+    if (leftNode.data !== null && this.sorter(leftNode.data, base.data) < 0) {
+      this._data[leftNode.index] = base.data;
+      this._data[index] = leftNode.data;
+      base = leftNode as Node<T>;
     }
-    if (rightNode.value && rightNode.value < smallest.value) {
-      smallest = rightNode;
-      smallestNodeType = "right";
-    }
-    const root = this._data[index];
-    switch (smallestNodeType) {
-      case "root":
-        break;
-      case "left":
-        this._data[leftNode.index] = root;
-        this._data[index] = smallest.data;
-        break;
-      case "right":
-        this._data[rightNode.index] = root;
-        this._data[index] = smallest.data;
-        break;
-      default:
-        unreachable(smallestNodeType);
+    if (rightNode.data !== null && this.sorter(rightNode.data, base.data) < 0) {
+      this._data[rightNode.index] = base.data;
+      this._data[index] = rightNode.data;
     }
   }
 
@@ -102,18 +99,26 @@ export class Heap<T> {
   public pop(): Omit<Node<T> | NoExistNode, "index"> {
     const root = this.root();
     if (!root) {
-      return { data: null, value: null };
+      return { data: null };
     }
     if (this._data.length === 1) {
       this._data.pop();
-      return { data: root.data, value: root.value };
+      return { data: root.data };
     }
     this._data[0] = this._data.pop()!;
     this.build();
-    return { data: root.data, value: root.value };
+    return { data: root.data };
   }
 
   public size(): number {
     return this._data.length;
   }
+
+  // public max(): number {
+  //   // FIXME: ナイーブな実装
+  //   return this._data.reduce(
+  //     (acc, cur) => Math.max(acc, this.mapper(cur)),
+  //     -Infinity
+  //   );
+  // }
 }

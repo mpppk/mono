@@ -36,4 +36,37 @@ export const addToSetMap = <K, V>(m: Map<K, Set<V>>, key: K, v: V) => {
 };
 
 export type NonEmptyArray<T> = [T, ...T[]];
+export const NonEmptyArray = Object.freeze({
+  parse: <T>(arr: T[]): NonEmptyArray<T> => {
+    if (arr.length === 0) {
+      throw new Error("empty array");
+    }
+    return arr as NonEmptyArray<T>;
+  },
+});
 export type TwoOrMoreArray<T> = [T, T, ...T[]];
+
+export const debugPrefix = Object.freeze({
+  root: "nbs",
+  lib: `nbs:lib`,
+  alg: "nbs:lib:alg",
+});
+
+export const uniqBy = <T, U>(arr: T[], fn: (v: T) => U): T[] => {
+  const set = new Set<U>();
+  return arr.filter((v) => {
+    const u = fn(v);
+    if (set.has(u)) {
+      return false;
+    } else {
+      set.add(u);
+      return true;
+    }
+  });
+};
+
+export const isPrimitive = (v: unknown): v is string | number | boolean => {
+  return (
+    typeof v === "string" || typeof v === "number" || typeof v === "boolean"
+  );
+};

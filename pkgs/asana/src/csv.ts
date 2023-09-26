@@ -3,17 +3,24 @@ import fs from "fs";
 import * as Papa from "papaparse";
 import { ParseResult } from "papaparse";
 
+const toNullishDate = (s: string) => {
+  if (s === "") {
+    return null;
+  }
+  return new Date(s);
+};
+
 export const AsanaRow = z.object({
   "Task ID": z.string(),
-  "Created At": z.string(),
-  "Completed At": z.string(),
-  "Last Modified": z.string(),
+  "Created At": z.coerce.date(),
+  "Completed At": z.string().transform(toNullishDate),
+  "Last Modified": z.coerce.date(),
   Name: z.string(),
   "Section/Column": z.string(),
   Assignee: z.string(),
   "Assignee Email": z.string(),
-  "Start Date": z.string(),
-  "Due Date": z.string(),
+  "Start Date": z.string().transform(toNullishDate),
+  "Due Date": z.string().transform(toNullishDate),
   Tags: z.string(),
   Notes: z.string(),
   Projects: z.string(),
@@ -21,12 +28,16 @@ export const AsanaRow = z.object({
   "Blocked By (Dependencies)": z.string(),
   "Blocking (Dependencies)": z.string(),
   Scrapbox: z.string(),
-  リリース予定日: z.string(),
+  リリース予定日: z.string().transform(toNullishDate),
   進行状況: z.string(),
   レビュアー: z.string(),
   タスクの進捗: z.string(),
 });
 export type AsanaRow = z.infer<typeof AsanaRow>;
+
+export type ExtendedAsanaRow = AsanaRow & {
+  link: string;
+};
 
 export const loadAsanaCsv = async (
   path: string
@@ -38,7 +49,7 @@ export const loadAsanaCsv = async (
     skipEmptyLines: true,
   });
 
-  results.data.forEach((row) => AsanaRow.parse(row));
+  results.data = results.data.map((row) => AsanaRow.parse(row));
   return results;
 };
 
