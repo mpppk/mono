@@ -1,10 +1,5 @@
 import { describe, it, expect } from "vitest";
 import { PriorityQueue } from "./priority-queue";
-import createDebug from "debug";
-import { debugPrefix } from "../common";
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const debug = createDebug(debugPrefix.alg + ":p-queue-test");
 
 describe("push and pop", () => {
   it("should be able to push and pop", () => {

@@ -317,7 +317,6 @@ export class DagForest<Node, EdgeValue> {
         visitedQueue.push(partialPath.dagId, path);
       }
     }
-    const r = visitedQueue.popAll();
-    return r;
+    return visitedQueue.popAll();
   }
 }
