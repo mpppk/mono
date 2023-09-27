@@ -14,7 +14,7 @@ const newNoExistNode = (index: number): NoExistNode => ({
 });
 
 export const isNoExistNode = <T>(
-  node: Node<T> | NoExistNode
+  node: Node<T> | NoExistNode,
 ): node is Node<T> => {
   return node.data !== null;
 };

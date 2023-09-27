@@ -40,7 +40,7 @@ export type ExtendedAsanaRow = AsanaRow & {
 };
 
 export const loadAsanaCsv = async (
-  path: string
+  path: string,
 ): Promise<ParseResult<AsanaRow>> => {
   const readFile = fs.promises.readFile;
   const contents = await readFile(path, "utf8");

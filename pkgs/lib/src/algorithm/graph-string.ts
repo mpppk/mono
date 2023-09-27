@@ -48,15 +48,15 @@ export class StringFinder<Node, EdgeValue> {
   public *findFromNode(
     nodeID: NodeID,
     dag: DAG<Node, EdgeValue>,
-    query: string
+    query: string,
   ): Generator<DagStrRange, undefined> {
     const targetChars = this.charsMap.add(
       nodeID,
-      this.mapper(dag.nodes.get(nodeID)!)
+      this.mapper(dag.nodes.get(nodeID)!),
     );
     const { target: tRes, remainQueryStartPos } = findFromChars(
       targetChars,
-      Char.fromString(query)
+      Char.fromString(query),
     );
 
     switch (tRes.type) {
@@ -93,7 +93,7 @@ export class StringFinder<Node, EdgeValue> {
   public *startWithFromNode(
     path: NonEmptyArray<NodeID>,
     dag: DAG<Node, EdgeValue>,
-    query: string
+    query: string,
   ): Generator<DagStrPrefix> {
     // nodeIDのノードで完結するケース
     const nodeID = path[path.length - 1];
@@ -119,7 +119,7 @@ export class StringFinder<Node, EdgeValue> {
       yield* this.startWithFromNode(
         [...path, child],
         dag,
-        query.slice(nodeStr.length)
+        query.slice(nodeStr.length),
       );
     }
   }

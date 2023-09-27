@@ -15,7 +15,7 @@ const emptyPriorityQueueEventHandler: PriorityQueueEventHandler<any> = {
 
 export const newPriorityQueueDebugger = <T>(
   debug: createDebug.Debugger,
-  name = ""
+  name = "",
 ): PriorityQueueEventHandler<T> => ({
   popped: (value: T, queue: PriorityQueue<T>) => {
     const v = isPrimitive(value) ? value : JSON.stringify(value);
@@ -31,19 +31,19 @@ export class PriorityQueue<T> {
   constructor(
     private sorter: HeapCompareFunction<T>,
     private eventHandler: PriorityQueueEventHandler<T> = emptyPriorityQueueEventHandler,
-    private heap = new Heap(sorter)
+    private heap = new Heap(sorter),
   ) {}
 
   public static newAsc<T>(
     mapper: (v: T) => number,
-    eventHandler: PriorityQueueEventHandler<T> = emptyPriorityQueueEventHandler
+    eventHandler: PriorityQueueEventHandler<T> = emptyPriorityQueueEventHandler,
   ): PriorityQueue<T> {
     return new PriorityQueue((a, b) => mapper(a) - mapper(b), eventHandler);
   }
 
   public static newDesc<T>(
     mapper: (v: T) => number,
-    eventHandler: PriorityQueueEventHandler<T> = emptyPriorityQueueEventHandler
+    eventHandler: PriorityQueueEventHandler<T> = emptyPriorityQueueEventHandler,
   ): PriorityQueue<T> {
     return new PriorityQueue((a, b) => mapper(b) - mapper(a), eventHandler);
   }

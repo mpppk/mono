@@ -27,7 +27,7 @@ type FindPartialPathResult = {
 };
 export type FindPartialPathMatcher<Node, EdgeValue> = (
   nodeID: NodeID,
-  dag: DAG<Node, EdgeValue>
+  dag: DAG<Node, EdgeValue>,
 ) => Generator<NodeID[], void>;
 
 type PrioritizedDag = {
@@ -123,7 +123,7 @@ class ForestDags<Node, EdgeValue> {
     dagID: DagID,
     from: NodeID,
     to: NodeID,
-    value: EdgeValue
+    value: EdgeValue,
   ): void {
     this.get(dagID).edges.add(from, to, value);
     addToSetMap(this.nodeDagMap, from, dagID);
@@ -137,7 +137,7 @@ class ForestDags<Node, EdgeValue> {
           ({
             dagId: id,
             priority: this.getPriority(id),
-          } as PrioritizedDag)
+          }) as PrioritizedDag,
       )
       .forEach((d) => queue.push(d));
     return queue.popAll().map((d) => d.dagId);
@@ -196,7 +196,10 @@ export class VisitedForestPathQueue {
   private readonly m = new VisitedForestPathMap();
   private readonly queue: PriorityQueue<FindPathCandidate>;
 
-  constructor(priorityMap: DagPriorityMap, private maxSize: number) {
+  constructor(
+    priorityMap: DagPriorityMap,
+    private maxSize: number,
+  ) {
     const sorter: HeapCompareFunction<FindPathCandidate> = (a, b) => {
       // costが大きい方が優先度が高い(=costが小さいものほどqueueに残りやすくなる)
       if (a.path.cost !== b.path.cost) {
@@ -210,7 +213,7 @@ export class VisitedForestPathQueue {
     };
     this.queue = new PriorityQueue<FindPathCandidate>(
       sorter,
-      newPriorityQueueDebugger(debug, "pathQueue:")
+      newPriorityQueueDebugger(debug, "pathQueue:"),
     );
   }
 
@@ -234,7 +237,7 @@ export class DagForest<Node, EdgeValue> {
   private readonly _edges: DagForestEdges<Node, EdgeValue>;
   constructor(
     private _nodes: Nodes<Node> = new Nodes(),
-    private _dags = new ForestDags<Node, EdgeValue>(_nodes)
+    private _dags = new ForestDags<Node, EdgeValue>(_nodes),
   ) {
     this._edges = new DagForestEdges(this._dags);
   }
@@ -261,7 +264,7 @@ export class DagForest<Node, EdgeValue> {
    * 全ノードから、条件にマッチする部分的なパスを返す
    */
   public *findPartialPath(
-    matcher: FindPartialPathMatcher<Node, EdgeValue>
+    matcher: FindPartialPathMatcher<Node, EdgeValue>,
   ): Generator<FindPartialPathResult, void, FindPartialPathOp | undefined> {
     // FIXME: nodeの取り出し順をいい感じにすると枝刈りもいい感じになるはず
     // いずれ訪問済みのdagをskipするopが必要になるかも
@@ -287,7 +290,7 @@ export class DagForest<Node, EdgeValue> {
 
   public *findWaypointPath(
     waypoints: NonEmptyArray<NodeID>,
-    options: FindPathOptions<Node, EdgeValue> = defaultFindPathOptions()
+    options: FindPathOptions<Node, EdgeValue> = defaultFindPathOptions(),
   ) {
     for (const { dag, id } of this.dags.iterate()) {
       for (const path of dag.findWaypointPath(waypoints, options)) {
@@ -300,7 +303,7 @@ export class DagForest<Node, EdgeValue> {
     query: string,
     mapper: (n: Node) => string,
     resultNum = 5,
-    costF: CostFunction<Node, EdgeValue>
+    costF: CostFunction<Node, EdgeValue>,
     // maxPriority: number
   ) {
     const finder = new StringFinder<Node, EdgeValue>(mapper);
@@ -312,7 +315,7 @@ export class DagForest<Node, EdgeValue> {
       const dag = this.dags.get(partialPath.dagId);
       for (const path of dag.findWaypointPath(
         NonEmptyArray.parse(partialPath.path),
-        { costF }
+        { costF },
       )) {
         visitedQueue.push(partialPath.dagId, path);
       }

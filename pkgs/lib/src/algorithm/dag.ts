@@ -73,7 +73,7 @@ class Edges<T> {
 
 export type CostFunction<Node, EdgeValue> = (
   edge: Edge<EdgeValue>,
-  context: DAG<Node, EdgeValue>
+  context: DAG<Node, EdgeValue>,
 ) => number;
 export type FindPathOptions<Node, EdgeValue> = Readonly<{
   from?: NodeID;
@@ -142,7 +142,7 @@ export class DAG<Node, EdgeValue> {
 
   public *findWaypointPath(
     waypoints: NonEmptyArray<NodeID>,
-    options: FindPathOptions<Node, EdgeValue> = defaultFindPathOptions()
+    options: FindPathOptions<Node, EdgeValue> = defaultFindPathOptions(),
   ) {
     if (waypoints.length < 1) {
       throw new Error("waypoints.length must be >= 1");
@@ -182,12 +182,12 @@ export class DAG<Node, EdgeValue> {
   }
 
   public *findPath(
-    options: FindPathOptions<Node, EdgeValue> = defaultFindPathOptions()
+    options: FindPathOptions<Node, EdgeValue> = defaultFindPathOptions(),
   ) {
     debug(`findPath:start from(${options.from}) to(${options.to})`);
     const queue = PriorityQueue.newAsc<Path>(
       (p) => p.cost,
-      newPriorityQueueDebugger(debug)
+      newPriorityQueueDebugger(debug),
     );
     const from = options.from === undefined ? this.roots : [options.from];
     const to = options.to === undefined ? this.leafs : [options.to];
@@ -195,7 +195,7 @@ export class DAG<Node, EdgeValue> {
       debug(
         "path:queued",
         { path: [f], cost: options.defaultCost ?? 0 },
-        `${queue.size()} -> ${queue.size() + 1}`
+        `${queue.size()} -> ${queue.size() + 1}`,
       );
       queue.push({ path: [f], cost: options.defaultCost ?? 0 });
     }
@@ -218,7 +218,7 @@ export class DAG<Node, EdgeValue> {
             path: [...path.path, child.to],
             cost: path.cost + cost,
           },
-          `${queue.size()} -> ${queue.size() + 1}`
+          `${queue.size()} -> ${queue.size() + 1}`,
         );
         queue.push({ path: [...path.path, child.to], cost: path.cost + cost });
       }

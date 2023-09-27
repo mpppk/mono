@@ -76,7 +76,7 @@ describe("advanced: find string", () => {
     for (const path of paths) {
       for (const { dag } of forest.dags.iterate()) {
         matchedPaths.push(
-          ...[...dag.findWaypointPath(NonEmptyArray.parse(path.path))]
+          ...[...dag.findWaypointPath(NonEmptyArray.parse(path.path))],
         );
       }
     }
@@ -93,7 +93,7 @@ describe("advanced: find string", () => {
     for (const path of paths) {
       for (const { dag } of forest.dags.iterate()) {
         matchedPaths.push(
-          ...[...dag.findWaypointPath(NonEmptyArray.parse(path.path))]
+          ...[...dag.findWaypointPath(NonEmptyArray.parse(path.path))],
         );
       }
     }
@@ -110,7 +110,7 @@ describe("advanced: find string", () => {
     for (const path of paths) {
       for (const { dag } of forest.dags.iterate()) {
         matchedPaths.push(
-          ...[...dag.findWaypointPath(NonEmptyArray.parse(path.path))]
+          ...[...dag.findWaypointPath(NonEmptyArray.parse(path.path))],
         );
       }
     }
@@ -142,7 +142,7 @@ describe("advanced: find string2", () => {
       "abcdef",
       (s) => s,
       5,
-      (s) => s.value
+      (s) => s.value,
     );
     expect(result).toEqual([
       { path: { path: [abc, def, jkl], cost: 0 }, dagId: dag1 },
