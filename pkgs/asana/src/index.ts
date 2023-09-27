@@ -9,7 +9,7 @@ const main = async () => {
   const toScrapboxLink = (scrapboxUrl: string) => {
     let link = scrapboxUrl.replace(
       `https://scrapbox.io/${env.SCRAPBOX_PROJECT}/`,
-      ""
+      "",
     );
     link = decodeURI(link);
     return link.replaceAll("%2F", "/").replaceAll("_", " ");

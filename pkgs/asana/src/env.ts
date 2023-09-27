@@ -11,7 +11,7 @@ export const loadEnv = () => {
   if (!res.success) {
     throw new Error(
       "invalid environment variable: " +
-        JSON.stringify(res.error.issues, null, 2)
+        JSON.stringify(res.error.issues, null, 2),
     );
   }
   return res.data;
