@@ -27,7 +27,28 @@ export class Nodes<T> {
   }
 
   public get(id: NodeID): T {
-    return this.nodes.get(id)!;
+    const node = this.nodes.get(id);
+    if (node === undefined) {
+      throw new Error(`node not found: ${id}`);
+    }
+    return node;
+  }
+
+  public safeGet(id: NodeID): T | undefined {
+    return this.nodes.get(id);
+  }
+
+  public toArray(): (T | undefined)[] {
+    const nodes: (T | undefined)[] = [];
+    let foundCnt = 0;
+    while (foundCnt < this.nodes.size) {
+      const node = this.safeGet(NodeID.new(foundCnt));
+      nodes.push(node);
+      if (node !== undefined) {
+        foundCnt++;
+      }
+    }
+    return nodes;
   }
 }
 
@@ -65,9 +86,13 @@ class Edges<T> {
   }
 
   public serialize() {
-    return {
-      children: [...this.edges.entries()],
-    };
+    const parent = [...this.revEdges.entries()].map(([to, edges]) => {
+      return [to, edges.map((e) => [e.from, e.value])];
+    });
+    const children = [...this.edges.entries()].map(([from, edges]) => {
+      return [from, edges.map((e) => [e.to, e.value])];
+    });
+    return { parent, children };
   }
 }
 
@@ -134,10 +159,8 @@ export class DAG<Node, EdgeValue> {
     });
   }
 
-  public serialize() {
-    return {
-      edges: this.edges.serialize(),
-    };
+  public serializeEdges() {
+    return this.edges.serialize();
   }
 
   public *findWaypointPath(

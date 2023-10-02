@@ -212,3 +212,37 @@ describe("VisitedForestPathQueue", () => {
     ] as FindPathCandidate[]);
   });
 });
+
+describe("serialize", () => {
+  it("is serializable", () => {
+    const forest = new DagForest<string, number>();
+    const { id } = forest.dags.new();
+    const abc = forest.nodes.add("abc");
+    const def = forest.nodes.add("def");
+    const ghi = forest.nodes.add("ghi");
+    const jkl = forest.nodes.add("jkl");
+    forest.edges.add(id, abc, def, 0);
+    forest.edges.add(id, def, ghi, 0);
+    forest.edges.add(id, def, jkl, 0);
+    const { nodes, dags } = forest.serialize();
+    expect(nodes).toEqual(["abc", "def", "ghi", "jkl"]);
+    expect(dags).toEqual([
+      {
+        id: 0,
+        priority: 0,
+        edges: {
+          children: [
+            [0, [[1, 0]]],
+            // prettier-ignore
+            [1, [[2,0], [3,0],],],
+          ],
+          parent: [
+            [1, [[0, 0]]],
+            [2, [[1, 0]]],
+            [3, [[1, 0]]],
+          ],
+        },
+      },
+    ]);
+  });
+});

@@ -110,8 +110,8 @@ class ForestDags<Node, EdgeValue> {
   }
 
   public *iterate() {
-    for (const { dagId } of this.priorityMap.iterate()) {
-      yield { dag: this.get(dagId), id: dagId };
+    for (const { dagId, priority } of this.priorityMap.iterate()) {
+      yield { dag: this.get(dagId), id: dagId, priority };
     }
   }
 
@@ -141,6 +141,17 @@ class ForestDags<Node, EdgeValue> {
       )
       .forEach((d) => queue.push(d));
     return queue.popAll().map((d) => d.dagId);
+  }
+
+  public serialize() {
+    return {
+      nodes: this.nodes.toArray(),
+      dags: [...this.iterate()].map((d) => ({
+        id: d.id,
+        priority: d.priority,
+        edges: d.dag.serializeEdges(),
+      })),
+    };
   }
 }
 
@@ -254,10 +265,7 @@ export class DagForest<Node, EdgeValue> {
   }
 
   public serialize() {
-    return {
-      nodes: [...this.nodes.nodes.entries()],
-      dags: [...this.dags.iterate()].map(({ dag }) => dag.serialize()),
-    };
+    return this._dags.serialize();
   }
 
   /**
