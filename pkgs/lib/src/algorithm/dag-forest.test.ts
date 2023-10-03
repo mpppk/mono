@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   DagForest,
+  DagForestData,
   DagPriorityMap,
   FindPathCandidate,
   ForestFindWaypointsPathResult,
@@ -210,5 +211,88 @@ describe("VisitedForestPathQueue", () => {
       //   path: { path: NodeID.fromArray([1, 3]), cost: 1 },
       // },
     ] as FindPathCandidate[]);
+  });
+});
+
+describe("serialize", () => {
+  it("is serializable", () => {
+    const forest = new DagForest<string, number>();
+    const { id } = forest.dags.new();
+    const abc = forest.nodes.add("abc");
+    const def = forest.nodes.add("def");
+    const ghi = forest.nodes.add("ghi");
+    const jkl = forest.nodes.add("jkl");
+    forest.edges.add(id, abc, def, 0);
+    forest.edges.add(id, def, ghi, 0);
+    forest.edges.add(id, def, jkl, 0);
+    const { nodes, dags } = forest.serialize();
+    expect(nodes).toEqual(["abc", "def", "ghi", "jkl"]);
+    expect(dags).toEqual([
+      {
+        id: 0,
+        priority: 0,
+        edges: {
+          children: [
+            [0, [[1, 0]]],
+            // prettier-ignore
+            [1, [[2,0], [3,0],],],
+          ],
+          parent: [
+            [1, [[0, 0]]],
+            [2, [[1, 0]]],
+            [3, [[1, 0]]],
+          ],
+        },
+      },
+    ]);
+  });
+});
+
+describe("fromData", () => {
+  it("is deserializable", () => {
+    const [nodeId0, nodeId1, nodeId2, nodeId3] = [
+      NodeID.new(0),
+      NodeID.new(1),
+      NodeID.new(2),
+      NodeID.new(3),
+    ];
+    const data: DagForestData<string, number> = {
+      nodes: ["abc", "def", "ghi", "jkl"],
+      dags: [
+        {
+          id: DagID.new(0),
+          priority: 0,
+          edges: [
+            // prettier-ignore
+            [nodeId0, [[nodeId1, 0], [nodeId2, 0],],],
+            [nodeId1, [[nodeId3, 0]]],
+            [nodeId2, [[nodeId3, 0]]],
+          ],
+        },
+      ],
+    };
+    const forest = DagForest.fromData(data);
+    const { nodes, dags } = forest.serialize();
+    expect(nodes).toEqual(["abc", "def", "ghi", "jkl"]);
+    expect(dags).toEqual([
+      {
+        id: 0,
+        priority: 0,
+        edges: {
+          children: [
+            // prettier-ignore
+            [0, [[1, 0], [2, 0],],],
+            [1, [[3, 0]]],
+            [2, [[3, 0]]],
+          ],
+          parent: [
+            [1, [[0, 0]]],
+            [2, [[0, 0]]],
+            // prettier-ignore
+            [3, [[1, 0], [2, 0]]],
+          ],
+        },
+      },
+    ]);
   });
 });

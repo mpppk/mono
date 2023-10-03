@@ -110,8 +110,8 @@ class ForestDags<Node, EdgeValue> {
   }
 
   public *iterate() {
-    for (const { dagId } of this.priorityMap.iterate()) {
-      yield { dag: this.get(dagId), id: dagId };
+    for (const { dagId, priority } of this.priorityMap.iterate()) {
+      yield { dag: this.get(dagId), id: dagId, priority };
     }
   }
 
@@ -141,6 +141,17 @@ class ForestDags<Node, EdgeValue> {
       )
       .forEach((d) => queue.push(d));
     return queue.popAll().map((d) => d.dagId);
+  }
+
+  public serialize() {
+    return {
+      nodes: this.nodes.toArray(),
+      dags: [...this.iterate()].map((d) => ({
+        id: d.id,
+        priority: d.priority,
+        edges: d.dag.serializeEdges(),
+      })),
+    };
   }
 }
 
@@ -233,6 +244,15 @@ export class VisitedForestPathQueue {
   }
 }
 
+export type DagForestData<Node, EdgeValue> = {
+  nodes: Node[];
+  dags: {
+    id: DagID;
+    priority: number;
+    edges: [NodeID, [NodeID, EdgeValue][]][];
+  }[];
+};
+
 export class DagForest<Node, EdgeValue> {
   private readonly _edges: DagForestEdges<Node, EdgeValue>;
   constructor(
@@ -241,6 +261,23 @@ export class DagForest<Node, EdgeValue> {
   ) {
     this._edges = new DagForestEdges(this._dags);
   }
+
+  public static fromData<Node, EdgeValue>(
+    data: DagForestData<Node, EdgeValue>,
+  ): DagForest<Node, EdgeValue> {
+    const forest = new DagForest<Node, EdgeValue>();
+    data.nodes.forEach((node) => forest.nodes.add(node));
+    for (const dagData of data.dags) {
+      const { id } = forest.dags.new(dagData.priority);
+      for (const [from, toList] of dagData.edges) {
+        for (const [to, value] of toList) {
+          forest.edges.add(id, from, to, value);
+        }
+      }
+    }
+    return forest;
+  }
+
   get nodes(): Nodes<Node> {
     return this._nodes;
   }
@@ -254,10 +291,7 @@ export class DagForest<Node, EdgeValue> {
   }
 
   public serialize() {
-    return {
-      nodes: [...this.nodes.nodes.entries()],
-      dags: [...this.dags.iterate()].map(({ dag }) => dag.serialize()),
-    };
+    return this._dags.serialize();
   }
 
   /**
