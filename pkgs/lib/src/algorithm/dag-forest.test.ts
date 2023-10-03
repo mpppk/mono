@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   DagForest,
+  DagForestData,
   DagPriorityMap,
   FindPathCandidate,
   ForestFindWaypointsPathResult,
@@ -240,6 +241,55 @@ describe("serialize", () => {
             [1, [[0, 0]]],
             [2, [[1, 0]]],
             [3, [[1, 0]]],
+          ],
+        },
+      },
+    ]);
+  });
+});
+
+describe("fromData", () => {
+  it("is deserializable", () => {
+    const [nodeId0, nodeId1, nodeId2, nodeId3] = [
+      NodeID.new(0),
+      NodeID.new(1),
+      NodeID.new(2),
+      NodeID.new(3),
+    ];
+    const data: DagForestData<string, number> = {
+      nodes: ["abc", "def", "ghi", "jkl"],
+      dags: [
+        {
+          id: DagID.new(0),
+          priority: 0,
+          edges: [
+            // prettier-ignore
+            [nodeId0, [[nodeId1, 0], [nodeId2, 0],],],
+            [nodeId1, [[nodeId3, 0]]],
+            [nodeId2, [[nodeId3, 0]]],
+          ],
+        },
+      ],
+    };
+    const forest = DagForest.fromData(data);
+    const { nodes, dags } = forest.serialize();
+    expect(nodes).toEqual(["abc", "def", "ghi", "jkl"]);
+    expect(dags).toEqual([
+      {
+        id: 0,
+        priority: 0,
+        edges: {
+          children: [
+            // prettier-ignore
+            [0, [[1, 0], [2, 0],],],
+            [1, [[3, 0]]],
+            [2, [[3, 0]]],
+          ],
+          parent: [
+            [1, [[0, 0]]],
+            [2, [[0, 0]]],
+            // prettier-ignore
+            [3, [[1, 0], [2, 0]]],
           ],
         },
       },
