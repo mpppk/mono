@@ -58,8 +58,8 @@ type Edge<T> = {
   value: T;
 };
 class Edges<T> {
-  private edges: Map<NodeID, Edge<T>[]> = new Map();
-  private revEdges: Map<NodeID, Edge<T>[]> = new Map();
+  public edges: Map<NodeID, Edge<T>[]> = new Map();
+  public revEdges: Map<NodeID, Edge<T>[]> = new Map();
   constructor() {}
   public add(from: NodeID, to: NodeID, value: T): void {
     const edges = this.edges.get(from) ?? [];
