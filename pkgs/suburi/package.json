@@ -16,8 +16,8 @@
   "author": "mpppk",
   "license": "ISC",
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser": "^6.0.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
     "dotenv-cli": "^7.2.1",
     "eslint": "^8.36.0",
     "eslint-config-prettier": "^9.0.0",
