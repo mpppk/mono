@@ -35,12 +35,20 @@ export class Nodes<T> {
     return node;
   }
 
-  public getFromHex(hex: string): T {
+  public getByHex(hex: string): T {
     const id = this.hexToIDMap.get(hex);
     if (id === undefined) {
       throw new Error(`node not found: ${hex}`);
     }
     return this.get(id);
+  }
+
+  public getId(node: T): NodeID | undefined {
+    return this.getIdByHex(this.toHex(node));
+  }
+
+  public getIdByHex(hex: string): NodeID | undefined {
+    return this.hexToIDMap.get(hex);
   }
 
   public safeGet(id: NodeID): T | undefined {
