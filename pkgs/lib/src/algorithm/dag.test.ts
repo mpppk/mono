@@ -3,6 +3,26 @@ import { DAG, FindPathOptions, Nodes, Path } from "./dag";
 import { DagForest, FindPartialPathOp } from "./dag-forest";
 import { NodeID } from "./values";
 
+describe("Nodes.getFromHex", () => {
+  it("string", () => {
+    const nodes = new Nodes<string>();
+    nodes.add("a");
+    expect(nodes.getFromHex("a")).toEqual("a");
+  });
+
+  it("number", () => {
+    const nodes = new Nodes<number>();
+    nodes.add(1);
+    expect(nodes.getFromHex("1")).toEqual(1);
+  });
+
+  it("object", () => {
+    const nodes = new Nodes<{ a: number }>((n) => n.a.toString());
+    nodes.add({ a: 1 });
+    expect(nodes.getFromHex("1")).toEqual({ a: 1 });
+  });
+});
+
 describe("DAG.findPath", () => {
   const dag = new DAG<string, number>(new Nodes());
   const a = dag.nodes.add("a");
