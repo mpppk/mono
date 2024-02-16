@@ -3,6 +3,46 @@ import { DAG, FindPathOptions, Nodes, Path } from "./dag";
 import { DagForest, FindPartialPathOp } from "./dag-forest";
 import { NodeID } from "./values";
 
+describe("Nodes.getFromHex", () => {
+  it("string", () => {
+    const nodes = new Nodes<string>();
+    nodes.add("a");
+    expect(nodes.getByHex("a")).toEqual("a");
+  });
+
+  it("number", () => {
+    const nodes = new Nodes<number>();
+    nodes.add(1);
+    expect(nodes.getByHex("1")).toEqual(1);
+  });
+
+  it("object", () => {
+    const nodes = new Nodes<{ a: number }>((n) => n.a.toString());
+    nodes.add({ a: 1 });
+    expect(nodes.getByHex("1")).toEqual({ a: 1 });
+  });
+});
+
+describe("Nodes.getId", () => {
+  it("string", () => {
+    const nodes = new Nodes<string>();
+    const nodeId = nodes.add("a");
+    expect(nodes.getId("a")).toEqual(nodeId);
+  });
+
+  it("number", () => {
+    const nodes = new Nodes<number>();
+    const nodeId = nodes.add(1);
+    expect(nodes.getId(1)).toEqual(nodeId);
+  });
+
+  it("object", () => {
+    const nodes = new Nodes<{ a: number }>((n) => n.a.toString());
+    const nodeId = nodes.add({ a: 1 });
+    expect(nodes.getId({ a: 1 })).toEqual(nodeId);
+  });
+});
+
 describe("DAG.findPath", () => {
   const dag = new DAG<string, number>(new Nodes());
   const a = dag.nodes.add("a");

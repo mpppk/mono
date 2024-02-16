@@ -22,6 +22,7 @@ export class Nodes<T> {
       return this.hexToIDMap.get(hex)!;
     }
     const id = this.newID();
+    this.hexToIDMap.set(hex, id);
     this.nodes.set(id, node);
     return id;
   }
@@ -32,6 +33,22 @@ export class Nodes<T> {
       throw new Error(`node not found: ${id}`);
     }
     return node;
+  }
+
+  public getByHex(hex: string): T {
+    const id = this.hexToIDMap.get(hex);
+    if (id === undefined) {
+      throw new Error(`node not found: ${hex}`);
+    }
+    return this.get(id);
+  }
+
+  public getId(node: T): NodeID | undefined {
+    return this.getIdByHex(this.toHex(node));
+  }
+
+  public getIdByHex(hex: string): NodeID | undefined {
+    return this.hexToIDMap.get(hex);
   }
 
   public safeGet(id: NodeID): T | undefined {
