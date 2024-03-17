@@ -50,6 +50,10 @@ export class StringFinder<Node, EdgeValue> {
     dag: DAG<Node, EdgeValue>,
     query: string,
   ): Generator<DagStrRange, undefined> {
+    const edge = dag.edges.get(nodeID);
+    if (edge === undefined) {
+      throw new Error(`dag does not have the specified node: ${nodeID}`);
+    }
     const targetChars = this.charsMap.add(
       nodeID,
       this.mapper(dag.nodes.get(nodeID)!),
@@ -77,7 +81,7 @@ export class StringFinder<Node, EdgeValue> {
 
     // ここでは必ずStrRange:incompleteなので、remainQueryStartPosは必ず存在する
     const remainQuery = query.slice(StrPos.toNumber(remainQueryStartPos!));
-    const children = (dag.edges.get(nodeID) ?? []).children.map((c) => c.to);
+    const children = edge.children.map((c) => c.to);
     for (const child of children) {
       for (const result of this.startWithFromNode([child], dag, remainQuery)) {
         yield {
@@ -97,6 +101,10 @@ export class StringFinder<Node, EdgeValue> {
   ): Generator<DagStrPrefix> {
     // nodeIDのノードで完結するケース
     const nodeID = path[path.length - 1];
+    const edge = dag.edges.get(nodeID);
+    if (edge === undefined) {
+      throw new Error(`dag does not have the specified node: ${nodeID}`);
+    }
     const node = dag.nodes.get(nodeID)!;
     this.charsMap.add(nodeID, this.mapper(node));
     const nodeStr = this.charsMap.getStr(nodeID)!;
@@ -114,7 +122,7 @@ export class StringFinder<Node, EdgeValue> {
     }
 
     // nodeIDのノードで完結しないケース
-    const children = (dag.edges.get(nodeID) ?? []).children.map((c) => c.to);
+    const children = edge.children.map((c) => c.to);
     for (const child of children) {
       yield* this.startWithFromNode(
         [...path, child],
