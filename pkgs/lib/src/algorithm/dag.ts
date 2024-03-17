@@ -5,8 +5,18 @@ import createDebug from "debug";
 
 const debug = createDebug(debugPrefix.alg + ":dag");
 
+const defaultToHex = (n: unknown) => {
+  if (typeof n === "string") {
+    return n;
+  }
+  if (typeof n === "number") {
+    return String(n);
+  }
+  throw new Error("toHex: unsupported type");
+};
+
 export class Nodes<T> {
-  constructor(private toHex: (n: T) => string = (n) => String(n)) {}
+  constructor(private toHex: (n: T) => string = defaultToHex) {}
 
   public nodes: Map<NodeID, T> = new Map();
   private hexToIDMap: Map<string, NodeID> = new Map();
