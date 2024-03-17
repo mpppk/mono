@@ -125,6 +125,9 @@ class ForestDags<Node, EdgeValue> {
     to: NodeID,
     value: EdgeValue,
   ): void {
+    const dag = this.get(dagID);
+    dag.addNodeId(from);
+    dag.addNodeId(to);
     this.get(dagID).edges.add(from, to, value);
     addToSetMap(this.nodeDagMap, from, dagID);
   }

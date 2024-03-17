@@ -173,19 +173,30 @@ export const Path = Object.freeze({
 
 export class DAG<Node, EdgeValue> {
   public edges: Edges<EdgeValue> = new Edges();
+  private nodeSet = new Set<NodeID>();
   constructor(public readonly nodes: Nodes<Node> = new Nodes()) {}
 
+  public addNodeId(id: NodeID) {
+    this.nodeSet.add(id);
+  }
+
+  public addNode(node: Node): NodeID {
+    const id = this.nodes.add(node);
+    this.nodeSet.add(id);
+    return id;
+  }
+
   get roots(): NodeID[] {
-    return [...this.nodes.nodes.keys()].filter((nodeID) => {
+    return Array.from(this.nodeSet).filter((nodeID) => {
       const edge = this.edges.get(nodeID);
-      return edge !== undefined && edge.parent.length === 0;
+      return edge === undefined || edge.parent.length === 0;
     });
   }
 
   get leafs(): NodeID[] {
-    return [...this.nodes.nodes.keys()].filter((nodeID) => {
+    return Array.from(this.nodeSet).filter((nodeID) => {
       const edge = this.edges.get(nodeID);
-      return edge !== undefined && edge.children.length === 0;
+      return edge === undefined || edge.children.length === 0;
     });
   }
 
