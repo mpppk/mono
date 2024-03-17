@@ -101,6 +101,9 @@ class ForestDags<Node, EdgeValue> {
     this._dags.push(dag);
     const dagId = DagID.new(this._dags.length - 1);
     this.priorityMap.set(dagId, priority);
+    for (const nodeId of dag.nodeSet) {
+      addToSetMap(this.nodeDagMap, nodeId, dagId);
+    }
     return dagId;
   }
 
