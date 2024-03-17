@@ -11,7 +11,7 @@ import {
 import { StringFinder } from "./graph-string";
 import { NonEmptyArray } from "../common";
 import { DagID, NodeID } from "./values";
-import { Path } from "./dag";
+import { Nodes, Path } from "./dag";
 
 describe("DagForest", () => {
   it("should work", () => {
@@ -142,6 +142,46 @@ describe("advanced: find string2", () => {
     const result = forest.findPathByString(
       "abcdef",
       (s) => s,
+      5,
+      (s) => s.value,
+    );
+    expect(result).toEqual([
+      { path: { path: [abc, def, jkl], cost: 0 }, dagId: dag1 },
+      { path: { path: [abc, def, jkl], cost: 1 }, dagId: dag3 },
+      { path: { path: [abc, def, jkl], cost: 1 }, dagId: dag2 },
+      { path: { path: [abc, def, ghi], cost: 1 }, dagId: dag1 },
+      { path: { path: [abc, def, ghi], cost: 3 }, dagId: dag3 },
+    ] as ForestFindWaypointsPathResult[]);
+  });
+});
+
+describe("advanced: find string3", () => {
+  const nodes = new Nodes<{ t: string }>((n) => n.t);
+  const forest = new DagForest<{ t: string }, number>(nodes);
+  const { id: dag1 } = forest.dags.new();
+  const abc = forest.nodes.add({ t: "abc" });
+  const def = forest.nodes.add({ t: "def" });
+  const ghi = forest.nodes.add({ t: "ghi" });
+  const jkl = forest.nodes.add({ t: "jkl" });
+  forest.edges.add(dag1, abc, def, 0);
+  forest.edges.add(dag1, def, ghi, 1);
+  forest.edges.add(dag1, def, jkl, 0);
+  const { id: dag2 } = forest.dags.new();
+  forest.edges.add(dag2, abc, def, 1);
+  forest.edges.add(dag2, def, ghi, 2);
+  forest.edges.add(dag2, def, jkl, 0);
+  const { id: dag3 } = forest.dags.new(1);
+  forest.edges.add(dag3, abc, def, 1);
+  forest.edges.add(dag3, def, ghi, 2);
+  forest.edges.add(dag3, def, jkl, 0);
+
+  it("findPathByString", () => {
+    const result = forest.findPathByString(
+      "abcdef",
+      (s) => {
+        console.log("in mapper", s);
+        return s.t;
+      },
       5,
       (s) => s.value,
     );
