@@ -186,8 +186,8 @@ describe("with findPartialPath", () => {
   const def = forest.nodes.add("def");
   const ghi = forest.nodes.add("ghi");
   // const forest = builder.build();
-  forest.edges.add(id, abc, def, 0);
-  forest.edges.add(id, def, ghi, 0);
+  forest.dags.get(id).edges.add(abc, def, 0);
+  forest.dags.get(id).edges.add(def, ghi, 0);
 
   it("first char", () => {
     const finder = new StringFinder<string, number>((s) => s);

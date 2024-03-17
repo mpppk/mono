@@ -94,12 +94,12 @@ describe("DAG.findPartialPath", () => {
     const b2 = dag2.nodes.add("b2");
     const c2 = dag2.nodes.add("c2");
     const c3 = dag2.nodes.add("c3");
-    forest.edges.add(dagId1, a1, b1, 0);
-    forest.edges.add(dagId1, b1, c1, 0);
-    forest.edges.add(dagId1, b1, d1, 0);
-    forest.edges.add(dagId2, a2, b2, 0);
-    forest.edges.add(dagId2, b2, c2, 0);
-    forest.edges.add(dagId2, b2, c3, 0);
+    forest.dags.get(dagId1).edges.add(a1, b1, 0);
+    forest.dags.get(dagId1).edges.add(b1, c1, 0);
+    forest.dags.get(dagId1).edges.add(b1, d1, 0);
+    forest.dags.get(dagId2).edges.add(a2, b2, 0);
+    forest.dags.get(dagId2).edges.add(b2, c2, 0);
+    forest.dags.get(dagId2).edges.add(b2, c3, 0);
     // b* -> c*であるようなパスを各DAGから最大1つ探す
     function* matcher(nodeId: NodeID, dag: DAG<string, number>) {
       const node = dag.nodes.get(nodeId);
@@ -138,11 +138,11 @@ describe("DAG.findPartialPath", () => {
 
 describe("DAG.findWaypointPath", () => {
   const dag = new DAG<string, number>(new Nodes());
-  const a = dag.addNode("a");
-  const b = dag.addNode("b");
-  const c = dag.addNode("c");
-  const d = dag.addNode("d");
-  const e = dag.addNode("e");
+  const a = dag.nodes.add("a");
+  const b = dag.nodes.add("b");
+  const c = dag.nodes.add("c");
+  const d = dag.nodes.add("d");
+  const e = dag.nodes.add("e");
   dag.edges.add(a, b, 0);
   dag.edges.add(b, c, 0);
   dag.edges.add(b, d, 0);
@@ -193,11 +193,11 @@ describe("DAG.findWaypointPath", () => {
 
 describe("DAG.findWaypointPath2", () => {
   const dag = new DAG<string, number>(new Nodes());
-  const a = dag.addNode("a");
-  const b = dag.addNode("b");
-  const c = dag.addNode("c");
-  const d = dag.addNode("d");
-  const e = dag.addNode("e");
+  const a = dag.nodes.add("a");
+  const b = dag.nodes.add("b");
+  const c = dag.nodes.add("c");
+  const d = dag.nodes.add("d");
+  const e = dag.nodes.add("e");
   dag.edges.add(a, c, 0);
   dag.edges.add(b, c, 0);
   dag.edges.add(c, d, 0);
@@ -228,9 +228,9 @@ describe("DAG.findWaypointPath2", () => {
 
 describe("DAG.findWaypointPath cost", () => {
   const dag = new DAG<string, number>(new Nodes());
-  const a = dag.addNode("a");
-  const b = dag.addNode("b");
-  const c = dag.addNode("c");
+  const a = dag.nodes.add("a");
+  const b = dag.nodes.add("b");
+  const c = dag.nodes.add("c");
   dag.edges.add(a, b, 1);
   dag.edges.add(a, c, 0);
 
@@ -262,8 +262,8 @@ describe("roots", () => {
     const nodes = new Nodes<string>();
     nodes.add("a");
     const dag1 = new DAG<string, number>(nodes);
-    const b = dag1.addNode("b");
-    const c = dag1.addNode("c");
+    const b = dag1.nodes.add("b");
+    const c = dag1.nodes.add("c");
     dag1.edges.add(b, c, 0);
     // dag1は一つもedgeを持たないため、rootもない
     expect(dag1.roots).toEqual([b]);
@@ -283,8 +283,8 @@ describe("leafs", () => {
     const nodes = new Nodes<string>();
     nodes.add("a");
     const dag1 = new DAG<string, number>(nodes);
-    const b = dag1.addNode("b");
-    const c = dag1.addNode("c");
+    const b = dag1.nodes.add("b");
+    const c = dag1.nodes.add("c");
     dag1.edges.add(b, c, 0);
     // dag1は一つもedgeを持たないため、rootもない
     expect(dag1.leafs).toEqual([c]);
