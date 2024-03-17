@@ -46,10 +46,10 @@ describe("DagForest.findWaypointPath", () => {
     const { id: dag1 } = forest.dags.new();
     const abc = forest.nodes.add("abc1");
     const def = forest.nodes.add("def1");
-    forest.edges.add(dag1, abc, def, 0);
+    forest.dags.get(dag1).edges.add(abc, def, 0);
 
     const { id: dag2 } = forest.dags.new(1);
-    forest.edges.add(dag2, abc, def, 0);
+    forest.dags.get(dag2).edges.add(abc, def, 0);
 
     const paths = [...forest.findWaypointPath([abc])];
     expect(paths).toEqual([
@@ -66,9 +66,9 @@ describe("advanced: find string", () => {
   const def = forest.nodes.add("def");
   const ghi = forest.nodes.add("ghi");
   const jkl = forest.nodes.add("jkl");
-  forest.edges.add(id, abc, def, 0);
-  forest.edges.add(id, def, ghi, 0);
-  forest.edges.add(id, def, jkl, 0);
+  forest.dags.get(id).edges.add(abc, def, 0);
+  forest.dags.get(id).edges.add(def, ghi, 0);
+  forest.dags.get(id).edges.add(def, jkl, 0);
 
   it("match single node", () => {
     const finder = new StringFinder<string, number>((s) => s);
@@ -126,17 +126,17 @@ describe("advanced: find string2", () => {
   const def = forest.nodes.add("def");
   const ghi = forest.nodes.add("ghi");
   const jkl = forest.nodes.add("jkl");
-  forest.edges.add(dag1, abc, def, 0);
-  forest.edges.add(dag1, def, ghi, 1);
-  forest.edges.add(dag1, def, jkl, 0);
+  forest.dags.get(dag1).edges.add(abc, def, 0);
+  forest.dags.get(dag1).edges.add(def, ghi, 1);
+  forest.dags.get(dag1).edges.add(def, jkl, 0);
   const { id: dag2 } = forest.dags.new();
-  forest.edges.add(dag2, abc, def, 1);
-  forest.edges.add(dag2, def, ghi, 2);
-  forest.edges.add(dag2, def, jkl, 0);
+  forest.dags.get(dag2).edges.add(abc, def, 1);
+  forest.dags.get(dag2).edges.add(def, ghi, 2);
+  forest.dags.get(dag2).edges.add(def, jkl, 0);
   const { id: dag3 } = forest.dags.new(1);
-  forest.edges.add(dag3, abc, def, 1);
-  forest.edges.add(dag3, def, ghi, 2);
-  forest.edges.add(dag3, def, jkl, 0);
+  forest.dags.get(dag3).edges.add(abc, def, 1);
+  forest.dags.get(dag3).edges.add(def, ghi, 2);
+  forest.dags.get(dag3).edges.add(def, jkl, 0);
 
   it("findPathByString", () => {
     const result = forest.findPathByString(
@@ -163,17 +163,17 @@ describe("advanced: find string3", () => {
   const def = forest.nodes.add({ t: "def" });
   const ghi = forest.nodes.add({ t: "ghi" });
   const jkl = forest.nodes.add({ t: "jkl" });
-  forest.edges.add(dag1, abc, def, 0);
-  forest.edges.add(dag1, def, ghi, 1);
-  forest.edges.add(dag1, def, jkl, 0);
+  forest.dags.get(dag1).edges.add(abc, def, 0);
+  forest.dags.get(dag1).edges.add(def, ghi, 1);
+  forest.dags.get(dag1).edges.add(def, jkl, 0);
   const { id: dag2 } = forest.dags.new();
-  forest.edges.add(dag2, abc, def, 1);
-  forest.edges.add(dag2, def, ghi, 2);
-  forest.edges.add(dag2, def, jkl, 0);
+  forest.dags.get(dag2).edges.add(abc, def, 1);
+  forest.dags.get(dag2).edges.add(def, ghi, 2);
+  forest.dags.get(dag2).edges.add(def, jkl, 0);
   const { id: dag3 } = forest.dags.new(1);
-  forest.edges.add(dag3, abc, def, 1);
-  forest.edges.add(dag3, def, ghi, 2);
-  forest.edges.add(dag3, def, jkl, 0);
+  forest.dags.get(dag3).edges.add(abc, def, 1);
+  forest.dags.get(dag3).edges.add(def, ghi, 2);
+  forest.dags.get(dag3).edges.add(def, jkl, 0);
 
   it("findPathByString", () => {
     const result = forest.findPathByString(
@@ -262,9 +262,9 @@ describe("serialize", () => {
     const def = forest.nodes.add("def");
     const ghi = forest.nodes.add("ghi");
     const jkl = forest.nodes.add("jkl");
-    forest.edges.add(id, abc, def, 0);
-    forest.edges.add(id, def, ghi, 0);
-    forest.edges.add(id, def, jkl, 0);
+    forest.dags.get(id).edges.add(abc, def, 0);
+    forest.dags.get(id).edges.add(def, ghi, 0);
+    forest.dags.get(id).edges.add(def, jkl, 0);
     const { nodes, dags } = forest.serialize();
     expect(nodes).toEqual(["abc", "def", "ghi", "jkl"]);
     expect(dags).toEqual([

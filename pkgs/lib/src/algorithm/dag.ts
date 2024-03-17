@@ -84,9 +84,21 @@ type Edge<T> = {
   to: NodeID;
   value: T;
 };
+
+type EdgesHandler<T> = (
+  from: NodeID,
+  to: NodeID,
+  value: T,
+  self: Edges<T>,
+) => void;
+
 class Edges<T> {
   public edges: Map<NodeID, Edge<T>[]> = new Map();
   public revEdges: Map<NodeID, Edge<T>[]> = new Map();
+  private handlers: EdgesHandler<T>[] = [];
+  public addHandler(handler: EdgesHandler<T>) {
+    this.handlers.push(handler);
+  }
   constructor() {}
   public add(from: NodeID, to: NodeID, value: T): void {
     const edges = this.edges.get(from) ?? [];
@@ -95,6 +107,7 @@ class Edges<T> {
     const revEdges = this.revEdges.get(to) ?? [];
     revEdges.push({ from, to, value });
     this.revEdges.set(to, revEdges);
+    this.handlers.forEach((h) => h(from, to, value, this));
   }
 
   /**
@@ -181,19 +194,41 @@ export const Path = Object.freeze({
   },
 });
 
+type NodeHandler<T> = (id: NodeID, node: T, self: Nodes<T>) => void;
+
 export class DAG<Node, EdgeValue> {
+  public nodes: Nodes<Node>;
   public edges: Edges<EdgeValue> = new Edges();
-  private nodeSet = new Set<NodeID>();
-  constructor(public readonly nodes: Nodes<Node> = new Nodes()) {}
-
-  public addNodeId(id: NodeID) {
-    this.nodeSet.add(id);
+  public nodeSet = new Set<NodeID>();
+  private nodeHandlers: NodeHandler<Node>[];
+  public addNodeHandler(handler: NodeHandler<Node>) {
+    this.nodeHandlers.push(handler);
   }
-
-  public addNode(node: Node): NodeID {
-    const id = this.nodes.add(node);
-    this.nodeSet.add(id);
-    return id;
+  constructor(readonly _nodes: Nodes<Node> = new Nodes()) {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const self = this;
+    this.nodeHandlers = [
+      (id) => {
+        this.nodeSet.add(id);
+      },
+    ];
+    this.nodes = new Proxy(_nodes, {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      get(target: Nodes<Node>, p: string | symbol, receiver: any): any {
+        if (p === "add") {
+          return (node: Node) => {
+            const id = target.add(node);
+            self.nodeHandlers.forEach((h) => h(id, node, target));
+            return id;
+          };
+        }
+        return Reflect.get(target, p, receiver);
+      },
+    });
+    this.edges.addHandler((from, to) => {
+      this.nodeSet.add(from);
+      this.nodeSet.add(to);
+    });
   }
 
   get roots(): NodeID[] {

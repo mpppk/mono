@@ -101,12 +101,24 @@ class ForestDags<Node, EdgeValue> {
     this._dags.push(dag);
     const dagId = DagID.new(this._dags.length - 1);
     this.priorityMap.set(dagId, priority);
+    for (const nodeId of dag.nodeSet) {
+      addToSetMap(this.nodeDagMap, nodeId, dagId);
+    }
     return dagId;
   }
 
   public new(priority = 0): { dag: DAG<Node, EdgeValue>; id: DagID } {
     const dag = new DAG<Node, EdgeValue>(this.nodes);
-    return { dag, id: this.add(dag, priority) };
+    const dagId = this.add(dag, priority);
+    dag.addNodeHandler((id) => {
+      addToSetMap(this.nodeDagMap, id, dagId);
+    });
+    dag.edges.addHandler((from) => {
+      addToSetMap(this.nodeDagMap, from, dagId);
+      // TODO: toは追加しなくて良い?
+      // addToSetMap(this.nodeDagMap, to, dagId);
+    });
+    return { dag, id: dagId };
   }
 
   public *iterate() {
@@ -117,19 +129,6 @@ class ForestDags<Node, EdgeValue> {
 
   public size(): number {
     return this._dags.length;
-  }
-
-  public addEdge(
-    dagID: DagID,
-    from: NodeID,
-    to: NodeID,
-    value: EdgeValue,
-  ): void {
-    const dag = this.get(dagID);
-    dag.addNodeId(from);
-    dag.addNodeId(to);
-    this.get(dagID).edges.add(from, to, value);
-    addToSetMap(this.nodeDagMap, from, dagID);
   }
 
   public sortByPriority(nodes: NodeID[]): NodeID[] {
@@ -163,13 +162,6 @@ export type ForestFindWaypointsPathResult = {
   dagId: DagID;
   priority: number;
 };
-
-class DagForestEdges<Node, EdgeValue> {
-  constructor(private dags: ForestDags<Node, EdgeValue>) {}
-  public add(dagID: DagID, from: NodeID, to: NodeID, value: EdgeValue): void {
-    this.dags.addEdge(dagID, from, to, value);
-  }
-}
 
 export type FindPathCandidate = {
   path: Path;
@@ -257,13 +249,10 @@ export type DagForestData<Node, EdgeValue> = {
 };
 
 export class DagForest<Node, EdgeValue> {
-  private readonly _edges: DagForestEdges<Node, EdgeValue>;
   constructor(
     private _nodes: Nodes<Node> = new Nodes(),
     private _dags = new ForestDags<Node, EdgeValue>(_nodes),
-  ) {
-    this._edges = new DagForestEdges(this._dags);
-  }
+  ) {}
 
   public static fromData<Node, EdgeValue>(
     data: DagForestData<Node, EdgeValue>,
@@ -274,7 +263,7 @@ export class DagForest<Node, EdgeValue> {
       const { id } = forest.dags.new(dagData.priority);
       for (const [from, toList] of dagData.edges) {
         for (const [to, value] of toList) {
-          forest.edges.add(id, from, to, value);
+          forest.dags.get(id).edges.add(from, to, value);
         }
       }
     }
@@ -287,10 +276,6 @@ export class DagForest<Node, EdgeValue> {
 
   get dags(): ForestDags<Node, EdgeValue> {
     return this._dags;
-  }
-
-  get edges() {
-    return this._edges;
   }
 
   public serialize() {
