@@ -67,7 +67,7 @@ export class DagPriorityMap {
   }
 }
 
-class ForestDags<Node, EdgeValue> {
+export class ForestDags<Node, EdgeValue> {
   private nodeDagMap: Map<NodeID, Set<DagID>> = new Map();
   public priorityMap: DagPriorityMap = new DagPriorityMap();
   private _dags: DAG<Node, EdgeValue>[] = [];
@@ -101,6 +101,9 @@ class ForestDags<Node, EdgeValue> {
     this._dags.push(dag);
     const dagId = DagID.new(this._dags.length - 1);
     this.priorityMap.set(dagId, priority);
+    for (const nodeId of dag.nodes.nodes.keys()) {
+      addToSetMap(this.nodeDagMap, nodeId, dagId);
+    }
     return dagId;
   }
 
