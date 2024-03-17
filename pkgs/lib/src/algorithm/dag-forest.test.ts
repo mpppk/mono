@@ -4,7 +4,6 @@ import {
   DagForestData,
   DagPriorityMap,
   FindPathCandidate,
-  ForestDags,
   ForestFindWaypointsPathResult,
   VisitedForestPathMap,
   VisitedForestPathQueue,
@@ -12,7 +11,7 @@ import {
 import { StringFinder } from "./graph-string";
 import { NonEmptyArray } from "../common";
 import { DagID, NodeID } from "./values";
-import { DAG, Nodes, Path } from "./dag";
+import { Nodes, Path } from "./dag";
 
 describe("DagForest", () => {
   it("should work", () => {
@@ -335,16 +334,5 @@ describe("fromData", () => {
         },
       },
     ]);
-  });
-});
-
-describe("ForestDags", () => {
-  it("listByNodeID", () => {
-    const nodes = new Nodes();
-    const dags = new ForestDags(nodes);
-    const dag = new DAG(nodes);
-    const a = dag.nodes.add("a");
-    const dagId = dags.add(dag);
-    expect(dags.listByNodeID(a)).toEqual([dagId]);
   });
 });
