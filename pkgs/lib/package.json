@@ -1,6 +1,6 @@
 {
   "name": "@mpppk/lib",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "scripts": {
     "build": "tsup ./src",
     "watch:build": "tsup ./src --watch",
