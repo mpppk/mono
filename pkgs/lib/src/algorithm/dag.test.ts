@@ -106,8 +106,11 @@ describe("DAG.findPartialPath", () => {
       if (!node.includes("b")) {
         return;
       }
-      const { children } = dag.edges.get(nodeId);
-      for (const child of children) {
+      const edge = dag.edges.get(nodeId);
+      if (edge === undefined) {
+        throw new Error("children not found");
+      }
+      for (const child of edge.children) {
         const childNode = dag.nodes.get(child.to);
         if (childNode.includes("c")) {
           yield [nodeId, child.to];
@@ -243,5 +246,25 @@ describe("DAG.findWaypointPath cost", () => {
         path: [a, b],
       },
     ]);
+  });
+});
+
+describe("roots", () => {
+  it("should work", () => {
+    const nodes = new Nodes<string>();
+    nodes.add("a");
+    const dag1 = new DAG<string, number>(nodes);
+    // dag1は一つもedgeを持たないため、rootもない
+    expect(dag1.roots.length).toBe(0);
+  });
+});
+
+describe("leafs", () => {
+  it("should work", () => {
+    const nodes = new Nodes<string>();
+    nodes.add("a");
+    const dag1 = new DAG<string, number>(nodes);
+    // dag1は一つもedgeを持たないため、rootもない
+    expect(dag1.leafs.length).toBe(0);
   });
 });

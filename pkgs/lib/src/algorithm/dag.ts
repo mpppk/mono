@@ -87,10 +87,23 @@ class Edges<T> {
     this.revEdges.set(to, revEdges);
   }
 
-  public get(from: NodeID): { parent: Edge<T>[]; children: Edge<T>[] } {
-    const parent = this.revEdges.get(from) ?? [];
-    const children = this.edges.get(from) ?? [];
-    return { parent, children };
+  /**
+   * 指定されたNodeの親と子を返す
+   * 一度もaddで参照されたことがないNodeの場合、undefinedを返す
+   * @param from
+   */
+  public get(from: NodeID):
+    | {
+        parent: Edge<T>[];
+        children: Edge<T>[];
+      }
+    | undefined {
+    const p = this.revEdges.get(from);
+    const c = this.edges.get(from);
+    if (p === undefined && c === undefined) {
+      return undefined;
+    }
+    return { parent: p ?? [], children: c ?? [] };
   }
 
   public getValue(from: NodeID, to: NodeID): T {
@@ -164,15 +177,15 @@ export class DAG<Node, EdgeValue> {
 
   get roots(): NodeID[] {
     return [...this.nodes.nodes.keys()].filter((nodeID) => {
-      const { parent } = this.edges.get(nodeID);
-      return parent.length === 0;
+      const edge = this.edges.get(nodeID);
+      return edge !== undefined && edge.parent.length === 0;
     });
   }
 
   get leafs(): NodeID[] {
     return [...this.nodes.nodes.keys()].filter((nodeID) => {
-      const { children } = this.edges.get(nodeID);
-      return children.length === 0;
+      const edge = this.edges.get(nodeID);
+      return edge !== undefined && edge.children.length === 0;
     });
   }
 
@@ -249,8 +262,11 @@ export class DAG<Node, EdgeValue> {
         yield path;
         continue;
       }
-      const { children } = this.edges.get(lastNode);
-      for (const child of children) {
+      const edge = this.edges.get(lastNode);
+      if (edge === undefined) {
+        throw new Error("DAG.findPath internal error: children not found");
+      }
+      for (const child of edge.children) {
         const cost = options.costF(child, this);
         debug(
           "path:queued",
