@@ -138,11 +138,11 @@ describe("DAG.findPartialPath", () => {
 
 describe("DAG.findWaypointPath", () => {
   const dag = new DAG<string, number>(new Nodes());
-  const a = dag.nodes.add("a");
-  const b = dag.nodes.add("b");
-  const c = dag.nodes.add("c");
-  const d = dag.nodes.add("d");
-  const e = dag.nodes.add("e");
+  const a = dag.addNode("a");
+  const b = dag.addNode("b");
+  const c = dag.addNode("c");
+  const d = dag.addNode("d");
+  const e = dag.addNode("e");
   dag.edges.add(a, b, 0);
   dag.edges.add(b, c, 0);
   dag.edges.add(b, d, 0);
@@ -193,11 +193,11 @@ describe("DAG.findWaypointPath", () => {
 
 describe("DAG.findWaypointPath2", () => {
   const dag = new DAG<string, number>(new Nodes());
-  const a = dag.nodes.add("a");
-  const b = dag.nodes.add("b");
-  const c = dag.nodes.add("c");
-  const d = dag.nodes.add("d");
-  const e = dag.nodes.add("e");
+  const a = dag.addNode("a");
+  const b = dag.addNode("b");
+  const c = dag.addNode("c");
+  const d = dag.addNode("d");
+  const e = dag.addNode("e");
   dag.edges.add(a, c, 0);
   dag.edges.add(b, c, 0);
   dag.edges.add(c, d, 0);
@@ -228,9 +228,9 @@ describe("DAG.findWaypointPath2", () => {
 
 describe("DAG.findWaypointPath cost", () => {
   const dag = new DAG<string, number>(new Nodes());
-  const a = dag.nodes.add("a");
-  const b = dag.nodes.add("b");
-  const c = dag.nodes.add("c");
+  const a = dag.addNode("a");
+  const b = dag.addNode("b");
+  const c = dag.addNode("c");
   dag.edges.add(a, b, 1);
   dag.edges.add(a, c, 0);
 
@@ -250,21 +250,43 @@ describe("DAG.findWaypointPath cost", () => {
 });
 
 describe("roots", () => {
-  it("should work", () => {
+  it("should return empty array if does not have any node", () => {
     const nodes = new Nodes<string>();
     nodes.add("a");
     const dag1 = new DAG<string, number>(nodes);
     // dag1は一つもedgeを持たないため、rootもない
     expect(dag1.roots.length).toBe(0);
   });
+
+  it("should return one root node", () => {
+    const nodes = new Nodes<string>();
+    nodes.add("a");
+    const dag1 = new DAG<string, number>(nodes);
+    const b = dag1.addNode("b");
+    const c = dag1.addNode("c");
+    dag1.edges.add(b, c, 0);
+    // dag1は一つもedgeを持たないため、rootもない
+    expect(dag1.roots).toEqual([b]);
+  });
 });
 
 describe("leafs", () => {
-  it("should work", () => {
+  it("should return empty array if does not have any node", () => {
     const nodes = new Nodes<string>();
     nodes.add("a");
     const dag1 = new DAG<string, number>(nodes);
     // dag1は一つもedgeを持たないため、rootもない
     expect(dag1.leafs.length).toBe(0);
+  });
+
+  it("should return one leaf node", () => {
+    const nodes = new Nodes<string>();
+    nodes.add("a");
+    const dag1 = new DAG<string, number>(nodes);
+    const b = dag1.addNode("b");
+    const c = dag1.addNode("c");
+    dag1.edges.add(b, c, 0);
+    // dag1は一つもedgeを持たないため、rootもない
+    expect(dag1.leafs).toEqual([c]);
   });
 });
