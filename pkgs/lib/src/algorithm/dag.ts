@@ -1,5 +1,5 @@
 import { NodeID } from "./values";
-import { debugPrefix, NonEmptyArray } from "../common";
+import { debugPrefix, isUnique, NonEmptyArray } from "../common";
 import { newPriorityQueueDebugger, PriorityQueue } from "./priority-queue";
 import createDebug from "debug";
 
@@ -364,12 +364,10 @@ export class DAG<Node, EdgeValue> {
     if (this.roots.length === 0) {
       return { path: [], reason: "no roots" };
     }
-    const visited = new Set<NodeID>();
     for (const path of this.dfs()) {
-      if (visited.has(path[path.length - 1])) {
+      if (!isUnique(path)) {
         return { path, reason: "cycle" };
       }
-      visited.add(path[path.length - 1]);
     }
     return null;
   }

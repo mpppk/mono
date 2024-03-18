@@ -70,3 +70,7 @@ export const isPrimitive = (v: unknown): v is string | number | boolean => {
     typeof v === "string" || typeof v === "number" || typeof v === "boolean"
   );
 };
+
+export const isUnique = <T>(arr: T[]): boolean => {
+  return new Set(arr).size === arr.length;
+};
