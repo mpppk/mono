@@ -153,6 +153,16 @@ describe("advanced: find string2", () => {
       { path: { path: [abc, def, ghi], cost: 3 }, dagId: dag3 },
     ] as ForestFindWaypointsPathResult[]);
   });
+
+  it("no match", () => {
+    const result = forest.findPathByString(
+      "xxx",
+      (s) => s,
+      5,
+      (s) => s.value,
+    );
+    expect(result).toEqual([] as ForestFindWaypointsPathResult[]);
+  });
 });
 
 describe("advanced: find string3", () => {

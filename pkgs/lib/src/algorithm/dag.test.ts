@@ -290,3 +290,71 @@ describe("leafs", () => {
     expect(dag1.leafs).toEqual([c]);
   });
 });
+
+describe("dfs", () => {
+  it("return all path", () => {
+    const dag1 = new DAG<string, number>();
+    const a = dag1.nodes.add("a");
+    const b = dag1.nodes.add("b");
+    const c = dag1.nodes.add("c");
+    const d = dag1.nodes.add("d");
+    dag1.edges.add(a, b, 0);
+    dag1.edges.add(b, c, 0);
+    dag1.edges.add(b, d, 0);
+    expect([...dag1.dfs()]).toEqual([[0], [0, 1], [0, 1, 2], [0, 1, 3]]);
+  });
+  it("skip", () => {
+    const dag1 = new DAG<string, number>();
+    const a = dag1.nodes.add("a");
+    const b = dag1.nodes.add("b");
+    const c = dag1.nodes.add("c");
+    const c2 = dag1.nodes.add("c2");
+    const d = dag1.nodes.add("d");
+    dag1.edges.add(a, b, 0);
+    dag1.edges.add(b, c, 0);
+    dag1.edges.add(c, c2, 0);
+    dag1.edges.add(b, d, 0);
+
+    const g = dag1.dfs();
+    let op: undefined | "skip" = undefined;
+    const paths = [];
+    for (let v = g.next(); !v.done; v = g.next(op)) {
+      const path = v.value;
+      paths.push(path);
+      const last = path[path.length - 1];
+      if (last === c) {
+        op = "skip";
+      }
+    }
+    expect(paths).toEqual([[a], [a, b], [a, b, c], [a, b, d]]);
+  });
+});
+
+describe("detectCycle", () => {
+  it("should return empty array if does not have cycle", () => {
+    const dag = new DAG<string, number>();
+    const a = dag.nodes.add("a");
+    const b = dag.nodes.add("b");
+    dag.edges.add(a, b, 0);
+    expect(dag.detectCycle()).toBeNull();
+  });
+
+  it("should return path array if have cycle", () => {
+    const dag = new DAG<string, number>();
+    const a = dag.nodes.add("a");
+    const b = dag.nodes.add("b");
+    const c = dag.nodes.add("c");
+    dag.edges.add(a, b, 0);
+    dag.edges.add(b, c, 0);
+    dag.edges.add(c, b, 0);
+    expect(dag.detectCycle()).toEqual({ reason: "cycle", path: [a, b, c, b] });
+  });
+  it("should return path array if does not have roots", () => {
+    const dag = new DAG<string, number>();
+    const a = dag.nodes.add("a");
+    const b = dag.nodes.add("b");
+    dag.edges.add(a, b, 0);
+    dag.edges.add(b, a, 0);
+    expect(dag.detectCycle()).toEqual({ reason: "no roots", path: [] });
+  });
+});
