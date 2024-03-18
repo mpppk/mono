@@ -179,7 +179,6 @@ describe("advanced: find string3", () => {
     const result = forest.findPathByString(
       "abcdef",
       (s) => {
-        console.log("in mapper", s);
         return s.t;
       },
       5,
@@ -191,6 +190,60 @@ describe("advanced: find string3", () => {
       { path: { path: [abc, def, jkl], cost: 1 }, dagId: dag2 },
       { path: { path: [abc, def, ghi], cost: 1 }, dagId: dag1 },
       { path: { path: [abc, def, ghi], cost: 3 }, dagId: dag3 },
+    ] as ForestFindWaypointsPathResult[]);
+  });
+});
+
+describe("partial nodes", () => {
+  const nodes = new Nodes<{ t: string }>((n) => n.t);
+  const forest = new DagForest<{ t: string }, number>(nodes);
+  const { id: dag1 } = forest.dags.new();
+  const abc = forest.nodes.add({ t: "abc" });
+  const def = forest.nodes.add({ t: "def" });
+  const ghi = forest.nodes.add({ t: "ghi" });
+  forest.dags.get(dag1).edges.add(abc, def, 0);
+  const { id: dag2 } = forest.dags.new();
+  forest.dags.get(dag2).edges.add(def, ghi, 0);
+
+  it("findPathByString1", () => {
+    const result = forest.findPathByString(
+      "abcdef",
+      (s) => s.t,
+      5,
+      (s) => s.value,
+    );
+    expect(result).toEqual([
+      { path: { path: [abc, def], cost: 0 }, dagId: dag1 },
+    ] as ForestFindWaypointsPathResult[]);
+  });
+  it("findPathByString2", () => {
+    const result = forest.findPathByString(
+      "defghi",
+      (s) => s.t,
+      5,
+      (s) => s.value,
+    );
+    expect(result).toEqual([
+      { path: { path: [def, ghi], cost: 0 }, dagId: dag2 },
+    ] as ForestFindWaypointsPathResult[]);
+  });
+});
+
+describe("single node", () => {
+  const nodes = new Nodes<string>((n) => n);
+  const forest = new DagForest<string, number>(nodes);
+  const { id: dag1 } = forest.dags.new();
+  const abc = forest.dags.get(dag1).nodes.add("abc");
+
+  it("findPathByString", () => {
+    const result = forest.findPathByString(
+      "abc",
+      (s) => s,
+      5,
+      (s) => s.value,
+    );
+    expect(result).toEqual([
+      { path: { path: [abc], cost: 0 }, dagId: dag1 },
     ] as ForestFindWaypointsPathResult[]);
   });
 });
