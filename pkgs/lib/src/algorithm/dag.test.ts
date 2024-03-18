@@ -368,4 +368,17 @@ describe("detectCycle", () => {
     dag.nodes.add("a");
     expect(dag.detectCycle()).toBeNull();
   });
+
+  it("check each path", () => {
+    const dag = new DAG<string, number>();
+    const a = dag.nodes.add("a");
+    const b = dag.nodes.add("b");
+    const c = dag.nodes.add("c");
+    const d = dag.nodes.add("d");
+    dag.edges.add(a, b, 0);
+    dag.edges.add(a, c, 0);
+    dag.edges.add(b, d, 0);
+    dag.edges.add(c, d, 0);
+    expect(dag.detectCycle()).toBeNull();
+  });
 });
