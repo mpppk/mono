@@ -328,6 +328,11 @@ describe("dfs", () => {
     }
     expect(paths).toEqual([[a], [a, b], [a, b, c], [a, b, d]]);
   });
+  it("single node", () => {
+    const dag1 = new DAG<string, number>();
+    dag1.nodes.add("a");
+    expect([...dag1.dfs()]).toEqual([[0]]);
+  });
 });
 
 describe("detectCycle", () => {
@@ -356,5 +361,11 @@ describe("detectCycle", () => {
     dag.edges.add(a, b, 0);
     dag.edges.add(b, a, 0);
     expect(dag.detectCycle()).toEqual({ reason: "no roots", path: [] });
+  });
+
+  it("single node", () => {
+    const dag = new DAG<string, number>();
+    dag.nodes.add("a");
+    expect(dag.detectCycle()).toBeNull();
   });
 });

@@ -351,10 +351,7 @@ export class DAG<Node, EdgeValue> {
       idList.length > 0
         ? this.edges.get(id)?.children.map((c) => c.to)
         : this.roots;
-    if (children === undefined) {
-      throw new Error(`node not found: ${id}`);
-    }
-    for (const child of children) {
+    for (const child of children ?? []) {
       yield* this.dfs([...idList, child]);
     }
     return;
