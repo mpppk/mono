@@ -336,4 +336,44 @@ export class DAG<Node, EdgeValue> {
       }
     }
   }
+
+  public *dfs(
+    idList: NodeID[] = [],
+  ): Generator<NodeID[], void, undefined | "skip"> {
+    if (idList.length > 0) {
+      const op = yield idList;
+      if (op === "skip") {
+        return;
+      }
+    }
+    const id = idList[idList.length - 1];
+    const children =
+      idList.length > 0
+        ? this.edges.get(id)?.children.map((c) => c.to)
+        : this.roots;
+    if (children === undefined) {
+      throw new Error(`node not found: ${id}`);
+    }
+    for (const child of children) {
+      yield* this.dfs([...idList, child]);
+    }
+    return;
+  }
+
+  public detectCycle(): {
+    path: NodeID[];
+    reason: "no roots" | "cycle";
+  } | null {
+    if (this.roots.length === 0) {
+      return { path: [], reason: "no roots" };
+    }
+    const visited = new Set<NodeID>();
+    for (const path of this.dfs()) {
+      if (visited.has(path[path.length - 1])) {
+        return { path, reason: "cycle" };
+      }
+      visited.add(path[path.length - 1]);
+    }
+    return null;
+  }
 }
