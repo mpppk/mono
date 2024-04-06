@@ -258,16 +258,20 @@ export class DAG<Node, EdgeValue> {
     }
     const generators: ReturnType<typeof this.findPath>[] = [];
     const { from, to } = options;
-    debug("first:findPath", { from, to: waypoints[0] });
-    generators.push(this.findPath({ ...options, from, to: waypoints[0] }));
+    debug("first:findShortestPath", { from, to: waypoints[0] });
+    generators.push(
+      this.findShortestPath({ ...options, from, to: waypoints[0] }),
+    );
     for (let i = 1; i < waypoints.length; i++) {
       const [from, to] = [waypoints[i - 1], waypoints[i]];
-      debug("second:findPath", { from, to: waypoints[0] });
-      generators.push(this.findPath({ ...options, from, to }));
+      debug("second:findShortestPath", { from, to: waypoints[0] });
+      generators.push(this.findShortestPath({ ...options, from, to }));
     }
     const lastWaypoint = waypoints[waypoints.length - 1];
-    debug("last:findPath", { from: lastWaypoint, to });
-    generators.push(this.findPath({ ...options, from: lastWaypoint, to }));
+    debug("last:findShortestPath", { from: lastWaypoint, to });
+    generators.push(
+      this.findShortestPath({ ...options, from: lastWaypoint, to }),
+    );
     const f = function* (generators2: typeof generators): Generator<Path> {
       const generators3 = [...generators2];
       const g = generators3.shift();
@@ -338,8 +342,9 @@ export class DAG<Node, EdgeValue> {
         yield* dfs([p, ...path], costs.get(p)!.minCostPrev);
       }
     }
-    const to = options.to === undefined ? this.leafs : [options.to];
-    // FIXME: toのうちコストが小さいものを優先
+    const to = options.to === undefined ? [...this.leafs] : [options.to];
+    // costの照準になるようにソート
+    to.sort((t1, t2) => costs.get(t1)!.cost - costs.get(t2)!.cost);
     for (const t of to) {
       for (const p of dfs([t], costs.get(t)!.minCostPrev)) {
         yield {
