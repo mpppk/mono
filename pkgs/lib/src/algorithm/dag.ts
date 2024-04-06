@@ -290,6 +290,66 @@ export class DAG<Node, EdgeValue> {
     }
   }
 
+  private calcMinPathCost(
+    options: FindPathOptions<Node, EdgeValue>,
+  ): Map<NodeID, { cost: number; minCostPrev: NodeID[] }> {
+    const costs = new Map<NodeID, { cost: number; minCostPrev: NodeID[] }>();
+    const queue = PriorityQueue.newAsc<NodeID>(
+      (id) => costs.get(id)?.cost ?? Infinity,
+      newPriorityQueueDebugger(debug),
+    );
+
+    const from = options.from === undefined ? this.roots : [options.from];
+    for (const f of from) {
+      costs.set(f, { cost: 0, minCostPrev: [] });
+      queue.push(f);
+    }
+    while (queue.size() > 0) {
+      const id = queue.pop();
+      const fromCost = costs.get(id)!.cost;
+      const children = this.edges.get(id)?.children ?? [];
+      for (const child of children) {
+        const edgeCost = options.costF(child, this);
+        const toC = costs.get(child.to);
+        const newCost = fromCost + edgeCost;
+        if (toC === undefined || toC.cost > fromCost + edgeCost) {
+          queue.push(child.to);
+          costs.set(child.to, {
+            cost: fromCost + edgeCost,
+            minCostPrev: [id],
+          });
+        } else if (toC.cost === newCost) {
+          toC.minCostPrev.push(id);
+        }
+      }
+    }
+    return costs;
+  }
+
+  public *findShortestPath(
+    options: FindPathOptions<Node, EdgeValue> = defaultFindPathOptions(),
+  ) {
+    const costs = this.calcMinPathCost(options);
+    function* dfs(path: NodeID[], prev: NodeID[]): Generator<NodeID[]> {
+      if (prev.length === 0) {
+        yield path;
+      }
+      for (const p of prev) {
+        yield* dfs([p, ...path], costs.get(p)!.minCostPrev);
+      }
+    }
+    const to = options.to === undefined ? this.leafs : [options.to];
+    // FIXME: toのうちコストが小さいものを優先
+    for (const t of to) {
+      for (const p of dfs([t], costs.get(t)!.minCostPrev)) {
+        yield {
+          path: p,
+          cost: costs.get(t)!.cost + (options.defaultCost ?? 0),
+        };
+      }
+    }
+  }
+
   public *findPath(
     options: FindPathOptions<Node, EdgeValue> = defaultFindPathOptions(),
   ) {

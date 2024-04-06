@@ -81,6 +81,41 @@ describe("DAG.findPath", () => {
   });
 });
 
+describe("DAG.findShortestPath", () => {
+  const dag = new DAG<string, number>(new Nodes());
+  const a = dag.nodes.add("a");
+  const b = dag.nodes.add("b");
+  const c = dag.nodes.add("c");
+  const d = dag.nodes.add("d");
+  const e = dag.nodes.add("e");
+  dag.edges.add(a, b, 1);
+  dag.edges.add(b, c, 2);
+  dag.edges.add(b, d, 1);
+  dag.edges.add(c, e, 1);
+  dag.edges.add(d, e, 1);
+  it("simple", () => {
+    const paths: Path[] = [];
+    const opt: FindPathOptions<string, number> = {
+      defaultCost: 1,
+      costF: (edge) => edge.value,
+    };
+    for (const path of dag.findShortestPath({ from: a, to: e, ...opt })) {
+      paths.push(path);
+    }
+    expect(paths).toEqual([{ path: [a, b, d, e], cost: 4 }]);
+  });
+
+  it("same node", () => {
+    const opt: FindPathOptions<string, number> = {
+      defaultCost: 1,
+      costF: (edge) => edge.value,
+    };
+    expect([...dag.findShortestPath({ from: a, to: a, ...opt })]).toEqual([
+      { path: [a], cost: 1 }, // cost = defaultCost
+    ]);
+  });
+});
+
 describe("DAG.findPartialPath", () => {
   it("simple", () => {
     const forest = new DagForest<string, number>();
