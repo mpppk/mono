@@ -268,10 +268,12 @@ export class DAG<Node, EdgeValue> {
       generators.push(this.findShortestPath({ ...options, from, to }));
     }
     const lastWaypoint = waypoints[waypoints.length - 1];
-    debug("last:findShortestPath", { from: lastWaypoint, to });
-    generators.push(
-      this.findShortestPath({ ...options, from: lastWaypoint, to }),
-    );
+    if (!this.leafs.includes(lastWaypoint)) {
+      debug("last:findShortestPath", { from: lastWaypoint, to });
+      generators.push(
+        this.findShortestPath({ ...options, from: lastWaypoint, to }),
+      );
+    }
     const f = function* (generators2: typeof generators): Generator<Path> {
       const generators3 = [...generators2];
       const g = generators3.shift();
@@ -295,45 +297,62 @@ export class DAG<Node, EdgeValue> {
   }
 
   private calcMinPathCost(
-    options: FindPathOptions<Node, EdgeValue>,
+    from: NodeID[],
+    costF: CostFunction<Node, EdgeValue>,
   ): Map<NodeID, { cost: number; minCostPrev: NodeID[] }> {
-    const costs = new Map<NodeID, { cost: number; minCostPrev: NodeID[] }>();
-    const queue = PriorityQueue.newAsc<NodeID>(
-      (id) => costs.get(id)?.cost ?? Infinity,
-      newPriorityQueueDebugger(debug),
-    );
+    const queue = (() => {
+      const costs = new Map<NodeID, { cost: number; minCostPrev: NodeID[] }>();
+      const queue = PriorityQueue.newAsc<NodeID>(
+        (id) => costs.get(id)?.cost ?? Infinity,
+        newPriorityQueueDebugger(debug),
+      );
 
-    const from = options.from === undefined ? this.roots : [options.from];
+      const get = (node: NodeID) => {
+        return costs.get(node) ?? { cost: Infinity, minCostPrev: [] };
+      };
+
+      return {
+        enqueue: (node: NodeID, cost: number, minCostPrev: NodeID[]) => {
+          costs.set(node, { cost, minCostPrev });
+          queue.push(node);
+        },
+        pop: () => {
+          const id = queue.pop();
+          const children = this.edges.get(id)?.children ?? [];
+          return { ...get(id), children, id };
+        },
+        size: () => queue.size(),
+        get,
+        getCosts: () => costs,
+      };
+    })();
+
     for (const f of from) {
-      costs.set(f, { cost: 0, minCostPrev: [] });
-      queue.push(f);
+      queue.enqueue(f, 0, []);
     }
     while (queue.size() > 0) {
-      const id = queue.pop();
-      const fromCost = costs.get(id)!.cost;
-      const children = this.edges.get(id)?.children ?? [];
+      const { id, cost: fromCost, children } = queue.pop();
       for (const child of children) {
-        const edgeCost = options.costF(child, this);
-        const toC = costs.get(child.to);
+        const edgeCost = costF(child, this);
+        const toC = queue.get(child.to);
         const newCost = fromCost + edgeCost;
         if (toC === undefined || toC.cost > fromCost + edgeCost) {
-          queue.push(child.to);
-          costs.set(child.to, {
-            cost: fromCost + edgeCost,
-            minCostPrev: [id],
-          });
+          queue.enqueue(child.to, fromCost + edgeCost, [id]);
         } else if (toC.cost === newCost) {
           toC.minCostPrev.push(id);
         }
       }
     }
-    return costs;
+    return queue.getCosts();
   }
 
   public *findShortestPath(
     options: FindPathOptions<Node, EdgeValue> = defaultFindPathOptions(),
   ) {
-    const costs = this.calcMinPathCost(options);
+    const costs = this.calcMinPathCost(
+      options.from ? [options.from] : this.roots,
+      options.costF,
+    );
     function* dfs(path: NodeID[], prev: NodeID[]): Generator<NodeID[]> {
       if (prev.length === 0) {
         yield path;
@@ -344,7 +363,10 @@ export class DAG<Node, EdgeValue> {
     }
     const to = options.to === undefined ? [...this.leafs] : [options.to];
     // costの照準になるようにソート
-    to.sort((t1, t2) => costs.get(t1)!.cost - costs.get(t2)!.cost);
+    to.sort(
+      (t1, t2) =>
+        (costs.get(t1)?.cost ?? Infinity) - (costs.get(t2)?.cost ?? Infinity),
+    );
     for (const t of to) {
       for (const p of dfs([t], costs.get(t)!.minCostPrev)) {
         yield {
