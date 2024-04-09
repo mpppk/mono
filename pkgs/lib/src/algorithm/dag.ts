@@ -258,16 +258,22 @@ export class DAG<Node, EdgeValue> {
     }
     const generators: ReturnType<typeof this.findPath>[] = [];
     const { from, to } = options;
-    debug("first:findPath", { from, to: waypoints[0] });
-    generators.push(this.findPath({ ...options, from, to: waypoints[0] }));
+    debug("first:findShortestPath", { from, to: waypoints[0] });
+    generators.push(
+      this.findShortestPath({ ...options, from, to: waypoints[0] }),
+    );
     for (let i = 1; i < waypoints.length; i++) {
       const [from, to] = [waypoints[i - 1], waypoints[i]];
-      debug("second:findPath", { from, to: waypoints[0] });
-      generators.push(this.findPath({ ...options, from, to }));
+      debug("second:findShortestPath", { from, to: waypoints[0] });
+      generators.push(this.findShortestPath({ ...options, from, to }));
     }
     const lastWaypoint = waypoints[waypoints.length - 1];
-    debug("last:findPath", { from: lastWaypoint, to });
-    generators.push(this.findPath({ ...options, from: lastWaypoint, to }));
+    if (!this.leafs.includes(lastWaypoint)) {
+      debug("last:findShortestPath", { from: lastWaypoint, to });
+      generators.push(
+        this.findShortestPath({ ...options, from: lastWaypoint, to }),
+      );
+    }
     const f = function* (generators2: typeof generators): Generator<Path> {
       const generators3 = [...generators2];
       const g = generators3.shift();
@@ -287,6 +293,87 @@ export class DAG<Node, EdgeValue> {
     };
     for (const p of f(generators)) {
       yield Path.normalize(p);
+    }
+  }
+
+  private calcMinPathCost(
+    from: NodeID[],
+    costF: CostFunction<Node, EdgeValue>,
+  ): Map<NodeID, { cost: number; minCostPrev: NodeID[] }> {
+    const queue = (() => {
+      const costs = new Map<NodeID, { cost: number; minCostPrev: NodeID[] }>();
+      const queue = PriorityQueue.newAsc<NodeID>(
+        (id) => costs.get(id)?.cost ?? Infinity,
+        newPriorityQueueDebugger(debug),
+      );
+
+      const get = (node: NodeID) => {
+        return costs.get(node) ?? { cost: Infinity, minCostPrev: [] };
+      };
+
+      return {
+        enqueue: (node: NodeID, cost: number, minCostPrev: NodeID[]) => {
+          costs.set(node, { cost, minCostPrev });
+          queue.push(node);
+        },
+        pop: () => {
+          const id = queue.pop();
+          const children = this.edges.get(id)?.children ?? [];
+          return { ...get(id), children, id };
+        },
+        size: () => queue.size(),
+        get,
+        getCosts: () => costs,
+      };
+    })();
+
+    for (const f of from) {
+      queue.enqueue(f, 0, []);
+    }
+    while (queue.size() > 0) {
+      const { id, cost: fromCost, children } = queue.pop();
+      for (const child of children) {
+        const edgeCost = costF(child, this);
+        const toC = queue.get(child.to);
+        const newCost = fromCost + edgeCost;
+        if (toC === undefined || toC.cost > fromCost + edgeCost) {
+          queue.enqueue(child.to, fromCost + edgeCost, [id]);
+        } else if (toC.cost === newCost) {
+          toC.minCostPrev.push(id);
+        }
+      }
+    }
+    return queue.getCosts();
+  }
+
+  public *findShortestPath(
+    options: FindPathOptions<Node, EdgeValue> = defaultFindPathOptions(),
+  ) {
+    const costs = this.calcMinPathCost(
+      options.from ? [options.from] : this.roots,
+      options.costF,
+    );
+    function* dfs(path: NodeID[], prev: NodeID[]): Generator<NodeID[]> {
+      if (prev.length === 0) {
+        yield path;
+      }
+      for (const p of prev) {
+        yield* dfs([p, ...path], costs.get(p)!.minCostPrev);
+      }
+    }
+    const to = options.to === undefined ? [...this.leafs] : [options.to];
+    // costの照準になるようにソート
+    to.sort(
+      (t1, t2) =>
+        (costs.get(t1)?.cost ?? Infinity) - (costs.get(t2)?.cost ?? Infinity),
+    );
+    for (const t of to) {
+      for (const p of dfs([t], costs.get(t)!.minCostPrev)) {
+        yield {
+          path: p,
+          cost: costs.get(t)!.cost + (options.defaultCost ?? 0),
+        };
+      }
     }
   }
 
