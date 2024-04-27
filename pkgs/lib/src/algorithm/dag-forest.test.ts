@@ -204,6 +204,76 @@ describe("advanced: find string3", () => {
   });
 });
 
+describe("many patterns", () => {
+  const nodes = new Nodes<{ t: string }>((n) => n.t);
+  const forest = new DagForest<{ t: string }, number>(nodes);
+  const { id: dag1 } = forest.dags.new();
+
+  let lastNodes = [
+    forest.nodes.add({ t: "node0-0" }),
+    forest.nodes.add({ t: "node0-1" }),
+    forest.nodes.add({ t: "node0-2" }),
+    forest.nodes.add({ t: "node0-3" }),
+  ];
+  for (let i = 1; i < 20; i++) {
+    const nodes = [
+      forest.nodes.add({ t: `node${i}-0` }),
+      forest.nodes.add({ t: `node${i}-1` }),
+      forest.nodes.add({ t: `node${i}-2` }),
+      forest.nodes.add({ t: `node${i}-3` }),
+    ];
+    for (let j = 0; j < 4; j++) {
+      for (let k = 0; k < 4; k++) {
+        forest.dags.get(dag1).edges.add(lastNodes[j], nodes[k], 0);
+      }
+    }
+    lastNodes = nodes;
+  }
+
+  it("findPathByString", () => {
+    const gen = forest.findPathByString2(
+      "node10-0",
+      (s) => {
+        return s.t;
+      },
+      (s) => s.value,
+    );
+
+    const toPathString = (result: FindPathCandidate) => {
+      return result.path.path.map((p) => forest.nodes.get(p).t);
+    };
+
+    const results = [];
+    for (let r = gen.next(undefined); !r.done; r = gen.next("next-dag")) {
+      results.push(r.value);
+    }
+    expect(results.map((r) => toPathString(r))).toEqual([
+      [
+        "node0-0",
+        "node1-3",
+        "node2-3",
+        "node3-3",
+        "node4-3",
+        "node5-3",
+        "node6-3",
+        "node7-3",
+        "node8-3",
+        "node9-3",
+        "node10-0",
+        "node11-0",
+        "node12-3",
+        "node13-3",
+        "node14-3",
+        "node15-3",
+        "node16-3",
+        "node17-3",
+        "node18-3",
+        "node19-0",
+      ],
+    ]);
+  });
+});
+
 describe("partial nodes", () => {
   const nodes = new Nodes<{ t: string }>((n) => n.t);
   const forest = new DagForest<{ t: string }, number>(nodes);

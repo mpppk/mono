@@ -331,7 +331,10 @@ export class DagForest<Node, EdgeValue> {
     const finder = new StringFinder<Node, EdgeValue>(mapper);
     // queueに残したい候補のpriorityを下げる
 
-    const visitedQueue = new VisitedForestPathQueue(this.dags.priorityMap, 5);
+    const visitedQueue = new VisitedForestPathQueue(
+      this.dags.priorityMap,
+      resultNum,
+    );
     debug("findPathByString", { query, resultNum });
     for (const partialPath of this.findPartialPath(finder.toMatcher(query))) {
       const dag = this.dags.get(partialPath.dagId);
@@ -343,5 +346,33 @@ export class DagForest<Node, EdgeValue> {
       }
     }
     return visitedQueue.popAll();
+  }
+
+  public *findPathByString2(
+    query: string,
+    mapper: (n: Node) => string,
+    costF: CostFunction<Node, EdgeValue>,
+  ): Generator<FindPathCandidate, void, FindPartialPathOp | undefined> {
+    const finder = new StringFinder<Node, EdgeValue>(mapper);
+    debug("findPathByString2", query);
+    const gen = this.findPartialPath(finder.toMatcher(query));
+    for (
+      let [r, op] = [
+        gen.next(undefined),
+        undefined as FindPartialPathOp | undefined,
+      ];
+      !r.done;
+      r = gen.next(op)
+    ) {
+      const partialPath = r.value;
+      const dag = this.dags.get(partialPath.dagId);
+      const nep = NonEmptyArray.parse(partialPath.path);
+      for (const path of dag.findWaypointPath(nep, { costF })) {
+        op = yield { path, dagId: partialPath.dagId };
+        if (op === "next-dag") {
+          break;
+        }
+      }
+    }
   }
 }
