@@ -256,7 +256,7 @@ export class DAG<Node, EdgeValue> {
     if (waypoints.length < 1) {
       throw new Error("waypoints.length must be >= 1");
     }
-    const generators: ReturnType<typeof this.findPath>[] = [];
+    const generators: ReturnType<typeof this.findShortestPath>[] = [];
     const { from, to } = options;
     debug("first:findShortestPath", { from, to: waypoints[0] });
     generators.push(

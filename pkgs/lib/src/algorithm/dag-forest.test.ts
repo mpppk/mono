@@ -165,6 +165,50 @@ describe("advanced: find string2", () => {
   });
 });
 
+describe("findMinCostPerDag", () => {
+  const forest = new DagForest<string, number>();
+  const { id: dag1 } = forest.dags.new();
+  const abc = forest.nodes.add("abc");
+  const def = forest.nodes.add("def");
+  const ghi = forest.nodes.add("ghi");
+  const jkl = forest.nodes.add("jkl");
+  forest.dags.get(dag1).edges.add(abc, def, 0);
+  forest.dags.get(dag1).edges.add(def, ghi, 1);
+  forest.dags.get(dag1).edges.add(def, jkl, 0);
+  const { id: dag2 } = forest.dags.new();
+  forest.dags.get(dag2).edges.add(abc, def, 1);
+  forest.dags.get(dag2).edges.add(def, ghi, 2);
+  forest.dags.get(dag2).edges.add(def, jkl, 0);
+  const { id: dag3 } = forest.dags.new(1);
+  forest.dags.get(dag3).edges.add(abc, def, 1);
+  forest.dags.get(dag3).edges.add(def, ghi, 2);
+  forest.dags.get(dag3).edges.add(def, jkl, 0);
+
+  it("ok", () => {
+    const results = forest.findMinCostPerDag(
+      "abcdef",
+      (s) => s,
+      (s) => s.value,
+      0,
+    );
+    expect([...results]).toEqual([
+      { path: { path: [abc, def, jkl], cost: 0 }, dagId: dag1 },
+      { path: { path: [abc, def, jkl], cost: 1 }, dagId: dag3 },
+      { path: { path: [abc, def, jkl], cost: 1 }, dagId: dag2 },
+    ] as ForestFindWaypointsPathResult[]);
+  });
+
+  it("no match", () => {
+    const result = forest.findMinCostPerDag(
+      "xxx",
+      (s) => s,
+      (s) => s.value,
+      0,
+    );
+    expect([...result]).toEqual([] as ForestFindWaypointsPathResult[]);
+  });
+});
+
 describe("advanced: find string3", () => {
   const nodes = new Nodes<{ t: string }>((n) => n.t);
   const forest = new DagForest<{ t: string }, number>(nodes);
@@ -201,6 +245,76 @@ describe("advanced: find string3", () => {
       { path: { path: [abc, def, ghi], cost: 1 }, dagId: dag1 },
       { path: { path: [abc, def, ghi], cost: 3 }, dagId: dag3 },
     ] as ForestFindWaypointsPathResult[]);
+  });
+});
+
+describe("many patterns", () => {
+  const nodes = new Nodes<{ t: string }>((n) => n.t);
+  const forest = new DagForest<{ t: string }, number>(nodes);
+  const { id: dag1 } = forest.dags.new();
+
+  let lastNodes = [
+    forest.nodes.add({ t: "node0-0" }),
+    forest.nodes.add({ t: "node0-1" }),
+    forest.nodes.add({ t: "node0-2" }),
+    forest.nodes.add({ t: "node0-3" }),
+  ];
+  for (let i = 1; i < 20; i++) {
+    const nodes = [
+      forest.nodes.add({ t: `node${i}-0` }),
+      forest.nodes.add({ t: `node${i}-1` }),
+      forest.nodes.add({ t: `node${i}-2` }),
+      forest.nodes.add({ t: `node${i}-3` }),
+    ];
+    for (let j = 0; j < 4; j++) {
+      for (let k = 0; k < 4; k++) {
+        forest.dags.get(dag1).edges.add(lastNodes[j], nodes[k], 0);
+      }
+    }
+    lastNodes = nodes;
+  }
+
+  it("findPathByString", () => {
+    const gen = forest.findPathByString2(
+      "node10-0node11-0",
+      (s) => {
+        return s.t;
+      },
+      (s) => s.value,
+    );
+
+    const toPathString = (result: FindPathCandidate) => {
+      return result.path.path.map((p) => forest.nodes.get(p).t);
+    };
+
+    const results = [];
+    for (let r = gen.next(undefined); !r.done; r = gen.next("next-dag")) {
+      results.push(r.value);
+    }
+    expect(results.map((r) => toPathString(r))).toEqual([
+      [
+        "node0-0",
+        "node1-3",
+        "node2-3",
+        "node3-3",
+        "node4-3",
+        "node5-3",
+        "node6-3",
+        "node7-3",
+        "node8-3",
+        "node9-3",
+        "node10-0",
+        "node11-0",
+        "node12-0",
+        "node13-3",
+        "node14-3",
+        "node15-3",
+        "node16-3",
+        "node17-3",
+        "node18-3",
+        "node19-0",
+      ],
+    ]);
   });
 });
 

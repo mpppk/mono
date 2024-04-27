@@ -331,7 +331,10 @@ export class DagForest<Node, EdgeValue> {
     const finder = new StringFinder<Node, EdgeValue>(mapper);
     // queueに残したい候補のpriorityを下げる
 
-    const visitedQueue = new VisitedForestPathQueue(this.dags.priorityMap, 5);
+    const visitedQueue = new VisitedForestPathQueue(
+      this.dags.priorityMap,
+      resultNum,
+    );
     debug("findPathByString", { query, resultNum });
     for (const partialPath of this.findPartialPath(finder.toMatcher(query))) {
       const dag = this.dags.get(partialPath.dagId);
@@ -343,5 +346,60 @@ export class DagForest<Node, EdgeValue> {
       }
     }
     return visitedQueue.popAll();
+  }
+
+  public *findPathByString2(
+    query: string,
+    mapper: (n: Node) => string,
+    costF: CostFunction<Node, EdgeValue>,
+  ): Generator<FindPathCandidate, void, FindPartialPathOp | undefined> {
+    const finder = new StringFinder<Node, EdgeValue>(mapper);
+    debug("findPathByString2", query);
+    const gen = this.findPartialPath(finder.toMatcher(query));
+    for (
+      let [r, op] = [
+        gen.next(undefined),
+        undefined as FindPartialPathOp | undefined,
+      ];
+      !r.done;
+      r = gen.next(op)
+    ) {
+      const partialPath = r.value;
+      const dag = this.dags.get(partialPath.dagId);
+      const nep = NonEmptyArray.parse(partialPath.path);
+      for (const path of dag.findWaypointPath(nep, { costF })) {
+        op = yield { path, dagId: partialPath.dagId };
+        if (op === "next-dag") {
+          break;
+        }
+      }
+    }
+  }
+
+  /**
+   * Dagごとの最小パスを返す
+   */
+  public *findMinCostPerDag(
+    query: string,
+    mapper: (n: Node) => string,
+    costF: CostFunction<Node, EdgeValue>,
+    minCost: number,
+  ): Generator<FindPathCandidate> {
+    const gen = this.findPathByString2(query, mapper, costF);
+    const costMap = new Map<number, { dagId: DagID; path: Path }[]>();
+    for (let r = gen.next(undefined); !r.done; r = gen.next("next-dag")) {
+      const v = r.value;
+      if (v.path.cost <= minCost) {
+        yield v;
+      } else {
+        costMap.set(v.path.cost, [...(costMap.get(v.path.cost) ?? []), v]);
+      }
+    }
+    // 最小コストのパスを返し切っても継続する必要がある場合、costが小さいものから順に返す
+    for (const cost of [...costMap.keys()].sort()) {
+      for (const v of costMap.get(cost) ?? []) {
+        yield v;
+      }
+    }
   }
 }
