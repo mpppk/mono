@@ -165,6 +165,50 @@ describe("advanced: find string2", () => {
   });
 });
 
+describe("findMinCostPerDag", () => {
+  const forest = new DagForest<string, number>();
+  const { id: dag1 } = forest.dags.new();
+  const abc = forest.nodes.add("abc");
+  const def = forest.nodes.add("def");
+  const ghi = forest.nodes.add("ghi");
+  const jkl = forest.nodes.add("jkl");
+  forest.dags.get(dag1).edges.add(abc, def, 0);
+  forest.dags.get(dag1).edges.add(def, ghi, 1);
+  forest.dags.get(dag1).edges.add(def, jkl, 0);
+  const { id: dag2 } = forest.dags.new();
+  forest.dags.get(dag2).edges.add(abc, def, 1);
+  forest.dags.get(dag2).edges.add(def, ghi, 2);
+  forest.dags.get(dag2).edges.add(def, jkl, 0);
+  const { id: dag3 } = forest.dags.new(1);
+  forest.dags.get(dag3).edges.add(abc, def, 1);
+  forest.dags.get(dag3).edges.add(def, ghi, 2);
+  forest.dags.get(dag3).edges.add(def, jkl, 0);
+
+  it("ok", () => {
+    const results = forest.findMinCostPerDag(
+      "abcdef",
+      (s) => s,
+      (s) => s.value,
+      0,
+    );
+    expect([...results]).toEqual([
+      { path: { path: [abc, def, jkl], cost: 0 }, dagId: dag1 },
+      { path: { path: [abc, def, jkl], cost: 1 }, dagId: dag3 },
+      { path: { path: [abc, def, jkl], cost: 1 }, dagId: dag2 },
+    ] as ForestFindWaypointsPathResult[]);
+  });
+
+  it("no match", () => {
+    const result = forest.findMinCostPerDag(
+      "xxx",
+      (s) => s,
+      (s) => s.value,
+      0,
+    );
+    expect([...result]).toEqual([] as ForestFindWaypointsPathResult[]);
+  });
+});
+
 describe("advanced: find string3", () => {
   const nodes = new Nodes<{ t: string }>((n) => n.t);
   const forest = new DagForest<{ t: string }, number>(nodes);
@@ -232,7 +276,7 @@ describe("many patterns", () => {
 
   it("findPathByString", () => {
     const gen = forest.findPathByString2(
-      "node10-0",
+      "node10-0node11-0",
       (s) => {
         return s.t;
       },
@@ -261,7 +305,7 @@ describe("many patterns", () => {
         "node9-3",
         "node10-0",
         "node11-0",
-        "node12-3",
+        "node12-0",
         "node13-3",
         "node14-3",
         "node15-3",

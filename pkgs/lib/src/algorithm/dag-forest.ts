@@ -375,4 +375,31 @@ export class DagForest<Node, EdgeValue> {
       }
     }
   }
+
+  /**
+   * Dagごとの最小パスを返す
+   */
+  public *findMinCostPerDag(
+    query: string,
+    mapper: (n: Node) => string,
+    costF: CostFunction<Node, EdgeValue>,
+    minCost: number,
+  ): Generator<FindPathCandidate> {
+    const gen = this.findPathByString2(query, mapper, costF);
+    const costMap = new Map<number, { dagId: DagID; path: Path }[]>();
+    for (let r = gen.next(undefined); !r.done; r = gen.next("next-dag")) {
+      const v = r.value;
+      if (v.path.cost <= minCost) {
+        yield v;
+      } else {
+        costMap.set(v.path.cost, [...(costMap.get(v.path.cost) ?? []), v]);
+      }
+    }
+    // 最小コストのパスを返し切っても継続する必要がある場合、costが小さいものから順に返す
+    for (const cost of [...costMap.keys()].sort()) {
+      for (const v of costMap.get(cost) ?? []) {
+        yield v;
+      }
+    }
+  }
 }
