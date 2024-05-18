@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { RequestHandler, Router } from "express";
+import { ClientResponse } from "./hono-types";
 
 export interface ApiEndpoint<
   Params extends z.ZodTypeAny = z.ZodTypeAny,
@@ -59,7 +60,7 @@ const validateMiddlewareGenerator: <E extends ApiEndpoint>(
 
 type ValidateLocals<E extends ApiEndpoint | undefined> = E extends ApiEndpoint
   ? { validate: Validators<E> }
-  : {};
+  : Record<string, never>;
 const emptyMiddleware: RequestHandler = (req, res, next) => next();
 export const wrapRouter = <const Endpoints extends ApiEndpoints>(
   pathMap: Endpoints,
@@ -84,3 +85,19 @@ export const wrapRouter = <const Endpoints extends ApiEndpoints>(
     },
   };
 };
+
+interface MyRequestInit<M extends Method> extends RequestInit {
+  method?: M;
+}
+
+export type MyFetch<E extends ApiEndpoints> = <
+  Path extends keyof E,
+  M extends Method,
+>(
+  input: Path,
+  init?: MyRequestInit<M>,
+) => Promise<
+  // TODO: 200だけでなく返しうる全レスポンスのUnionとする
+  // FIXME: NonNullable
+  ClientResponse<z.infer<NonNullable<E[Path][M]>["res"]>, 200, "json">
+>;
