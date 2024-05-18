@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
-import { ApiEndpoints, TFetch, wrapRouter } from "./index";
+import { ApiEndpoints } from "./index";
+import { wrapRouter } from "./express";
 
 const pathMap = {
   "/user": {
@@ -53,14 +54,6 @@ const main = async () => {
   wRouter.get("/event", (req, res) => {
     console.log("hello", res.locals);
   });
-
-  const origin = "https://example.com" as const;
-  const fetch2 = fetch as TFetch<typeof origin, PathMap>;
-  const res = await fetch2(`${origin}/user`, { method: "get" });
-  const r = await res.json();
-  console.log(r);
-  // Zodによるバリデーションはデフォルトでは実行しない。したい場合は明示的にparseする
-  // const r = pathMap["/user"].get.res.parse(await res.json());
 };
 
 main();
