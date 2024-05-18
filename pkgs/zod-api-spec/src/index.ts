@@ -1,11 +1,13 @@
 import { z } from "zod";
 import { RequestHandler, Router } from "express";
-import { ClientResponse } from "./hono-types";
+import { StatusCode, TResponse } from "./hono-types";
 
-export interface ApiEndpoint<
+export type ApiResponses = Partial<Record<StatusCode, z.ZodTypeAny>>;
+
+export interface ApiSpec<
   Params extends z.ZodTypeAny = z.ZodTypeAny,
   Body extends z.ZodTypeAny = z.ZodTypeAny,
-  Response extends z.ZodTypeAny = z.ZodTypeAny,
+  Response extends ApiResponses = Partial<Record<StatusCode, z.ZodTypeAny>>,
 > {
   params?: Params;
   body?: Body;
@@ -14,21 +16,26 @@ export interface ApiEndpoint<
 type Method = "get" | "post" | "put" | "delete" | "patch" | "options" | "head";
 export type ApiEndpoints<Path extends string = string> = Record<
   Path,
-  Partial<Record<Method, ApiEndpoint>>
+  Partial<Record<Method, ApiSpec>>
 >;
 
-type InferEndpoint<
-  Endpoint extends ApiEndpoint | undefined,
-  Key extends keyof ApiEndpoint,
-> = Endpoint extends ApiEndpoint ? z.infer<NonNullable<Endpoint[Key]>> : never;
+type ApiSpecRes<
+  AS extends ApiSpec | undefined,
+  SC extends StatusCode,
+> = AS extends ApiSpec
+  ? AS["res"][SC] extends z.ZodTypeAny
+    ? z.infer<AS["res"][SC]>
+    : never
+  : never;
 
 type Handler<
-  Endpoint extends ApiEndpoint | undefined,
+  Endpoint extends ApiSpec | undefined,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   Locals extends Record<string, any> = Record<string, never>,
 > = RequestHandler<
   unknown,
-  InferEndpoint<Endpoint, "res">,
+  // FIXME
+  ApiSpecRes<Endpoint, 200>,
   unknown,
   unknown,
   Locals
@@ -37,14 +44,24 @@ type Handler<
 type Validator<V> = () => V extends z.ZodTypeAny
   ? ReturnType<V["safeParse"]>
   : never;
-type Validators<E extends ApiEndpoint> = {
-  [K in keyof E]: Validator<E[K]>;
+type ResValidators<AR extends ApiResponses> = {
+  [K in keyof AR]: Validator<AR[K]>;
 };
-const validateMiddlewareGenerator: <E extends ApiEndpoint>(
+type Validators<E extends ApiSpec> = {
+  [K in keyof E]: Validator<E[K]>;
+} & { res: ResValidators<E["res"]> };
+const validateMiddlewareGenerator: <E extends ApiSpec>(
   e: E,
 ) => RequestHandler = (e) => (req, res, next) => {
   res.locals.validate = {
-    res: () => e.res.safeParse(res),
+    // TODO: 指定可能なstatus codeだけ受け入れたい
+    res: Object.entries(e.res).reduce(
+      (acc, [k, v]) => {
+        acc[k as unknown as StatusCode] = () => v.safeParse(res);
+        return acc;
+      },
+      {} as { [K in keyof typeof e.res]: Validator<(typeof e.res)[K]> },
+    ),
   };
   if (e.params !== undefined) {
     const params = e.params;
@@ -58,8 +75,8 @@ const validateMiddlewareGenerator: <E extends ApiEndpoint>(
   next();
 };
 
-type ValidateLocals<E extends ApiEndpoint | undefined> = E extends ApiEndpoint
-  ? { validate: Validators<E> }
+type ValidateLocals<AS extends ApiSpec | undefined> = AS extends ApiSpec
+  ? { validate: Validators<AS> }
   : Record<string, never>;
 const emptyMiddleware: RequestHandler = (req, res, next) => next();
 export const wrapRouter = <const Endpoints extends ApiEndpoints>(
@@ -86,18 +103,28 @@ export const wrapRouter = <const Endpoints extends ApiEndpoints>(
   };
 };
 
-interface MyRequestInit<M extends Method> extends RequestInit {
+interface TRequestInit<M extends Method> extends RequestInit {
   method?: M;
 }
 
-export type MyFetch<E extends ApiEndpoints> = <
-  Path extends keyof E,
+type SCHEMA = "http" | "https" | "about" | "blob" | "data" | "file";
+type URL = `${SCHEMA}://${string}`;
+export type TFetch<Origin extends URL, E extends ApiEndpoints> = <
+  Path extends keyof E & string,
   M extends Method,
 >(
-  input: Path,
-  init?: MyRequestInit<M>,
+  input: `${Origin}${Path}`,
+  init?: TRequestInit<M>,
 ) => Promise<
   // TODO: 200だけでなく返しうる全レスポンスのUnionとする
-  // FIXME: NonNullable
-  ClientResponse<z.infer<NonNullable<E[Path][M]>["res"]>, 200, "json">
+  TResponse<
+    z.infer<
+      M extends Method
+        ? // FIXME: NonNullable
+          NonNullable<NonNullable<E[Path][M]>["res"][200]>
+        : NonNullable<E[Path]["get"]>["res"][200]
+    >,
+    200,
+    "json"
+  >
 >;
