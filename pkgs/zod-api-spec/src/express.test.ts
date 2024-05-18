@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { ApiEndpoints } from "./index";
+import { ApiEndpoints } from "./spec";
 import { wrapRouter } from "./express";
 
 const pathMap = {
@@ -39,7 +39,6 @@ const pathMap = {
   },
   "/event": {},
 } satisfies ApiEndpoints;
-type PathMap = typeof pathMap;
 
 const main = async () => {
   const wRouter = wrapRouter(pathMap, Router());

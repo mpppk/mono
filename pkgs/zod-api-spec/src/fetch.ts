@@ -1,4 +1,4 @@
-import { ApiEndpoints, MergeApiResponses, Method } from "./index";
+import { ApiEndpoints, MergeApiResponses, Method } from "./spec";
 
 interface TRequestInit<M extends Method> extends RequestInit {
   method?: M;
@@ -9,7 +9,7 @@ type UrlPrefix = `${UrlSchema}://` | "";
 type URL = `${UrlPrefix}${string}`;
 export type TFetch<Origin extends URL, E extends ApiEndpoints> = <
   Path extends keyof E & string,
-  M extends Method,
+  M extends Method = "get",
 >(
   input: `${Origin}${Path}`,
   init?: TRequestInit<M>,

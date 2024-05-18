@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ApiResponses, ApiSpec } from "./index";
+import { ApiResponses, ApiSpec } from "./spec";
 
 export type Validator<V> = () => V extends z.ZodTypeAny
   ? ReturnType<V["safeParse"]>
