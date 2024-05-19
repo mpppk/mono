@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { ApiEndpoints } from "./";
 import { TFetch } from "./";
-import { unreachable } from "@mpppk/lib/src";
 
 const pathMap = {
   "/user": {

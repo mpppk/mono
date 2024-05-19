@@ -1,6 +1,6 @@
 import { RequestHandler, Router } from "express";
 import { StatusCode } from "./hono-types";
-import { ApiEndpoints, ApiSpec, ApiSpecRes } from "./";
+import { ApiEndpoints, ApiSpec, ApiSpecRes, Method } from "./";
 import { Validator, Validators } from "./validator";
 
 type Handler<
@@ -45,26 +45,40 @@ const validateMiddlewareGenerator: <E extends ApiSpec>(
 };
 
 const emptyMiddleware: RequestHandler = (req, res, next) => next();
+type TRouter<Endpoints extends ApiEndpoints> = {
+  [M in Method]: <Path extends string & keyof Endpoints>(
+    path: Path,
+    ...handlers: Array<
+      Handler<Endpoints[Path][M], ValidateLocals<Endpoints[Path][M]>>
+    >
+  ) => TRouter<Endpoints>;
+};
 export const wrapRouter = <const Endpoints extends ApiEndpoints>(
   pathMap: Endpoints,
   router: Router,
-) => {
-  return {
-    get: <Path extends string & keyof Endpoints>(
+): TRouter<Endpoints> => {
+  // 各メソッドのラッパーをreduceとかで実装する
+  return Method.reduce((wRouter, method) => {
+    wRouter[method] = <Path extends string & keyof Endpoints>(
       path: Path,
       ...handlers: Array<
-        Handler<Endpoints[Path]["get"], ValidateLocals<Endpoints[Path]["get"]>>
+        Handler<
+          Endpoints[Path][typeof method],
+          ValidateLocals<Endpoints[Path][typeof method]>
+        >
       >
     ) => {
       const methods = pathMap[path];
+      const spec = methods[method];
       router.get(
         path,
-        methods.get
-          ? validateMiddlewareGenerator(methods.get)
+        spec !== undefined
+          ? validateMiddlewareGenerator(spec)
           : emptyMiddleware,
         ...handlers,
       );
-      return this;
-    },
-  };
+      return wRouter;
+    };
+    return wRouter;
+  }, {} as TRouter<Endpoints>);
 };

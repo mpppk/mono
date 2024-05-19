@@ -35,14 +35,16 @@ export type ApiSpecRes<
     : never
   : never;
 
-export type Method =
-  | "get"
-  | "post"
-  | "put"
-  | "delete"
-  | "patch"
-  | "options"
-  | "head";
+export const Method = [
+  "get",
+  "post",
+  "put",
+  "delete",
+  "patch",
+  "options",
+  "head",
+] as const;
+export type Method = (typeof Method)[number];
 export type ApiEndpoints<Path extends string = string> = Record<
   Path,
   Partial<Record<Method, ApiSpec>>

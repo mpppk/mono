@@ -10,15 +10,15 @@ const pathMap = {
         id: z.string(),
       }),
       res: {
-        200: z.object({ text: z.string() }),
+        200: z.object({ userName: z.string() }),
       },
     },
     post: {
       res: {
-        200: z.object({ text: z.string() }),
+        200: z.object({ userId: z.string() }),
       },
       body: z.object({
-        name: z.string(),
+        userName: z.string(),
       }),
     },
   },
@@ -44,6 +44,16 @@ const main = async () => {
   const wRouter = wrapRouter(pathMap, Router());
   wRouter.get("/user", (req, res) => {
     const r = res.locals.validate.params();
+    if (r.success) {
+      console.log(r.data.id);
+    }
+    console.log(r);
+  });
+  wRouter.post("/user", (req, res) => {
+    const r = res.locals.validate.body();
+    if (r.success) {
+      console.log(r.data.userName);
+    }
     console.log(r);
   });
   wRouter.get("/item", (req, res) => {
