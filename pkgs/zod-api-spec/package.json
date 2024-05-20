@@ -10,7 +10,8 @@
     "test:unit": "vitest",
     "test:lint": "eslint .",
     "test:format": "prettier --check .",
-    "test:type-check": "tsc --noEmit"
+    "test:type-check": "tsc --noEmit",
+    "example:express": "tsx examples/express.ts"
   },
   "author": "mpppk",
   "license": "ISC",

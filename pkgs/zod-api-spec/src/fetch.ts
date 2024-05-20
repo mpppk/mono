@@ -1,8 +1,20 @@
-import { ApiEndpoints, MergeApiResponses, Method } from "./spec";
+import { ApiEndpoints, ApiResponses, ApiResSchema, Method } from "./spec";
+import { StatusCode, ClientResponse } from "./hono-types";
+import { z } from "zod";
 
 interface TRequestInit<M extends Method> extends RequestInit {
   method?: M;
 }
+
+type ApiClientResponses<AResponses extends ApiResponses> = {
+  [SC in keyof AResponses & StatusCode]: ClientResponse<
+    z.infer<ApiResSchema<AResponses, SC>>,
+    SC,
+    "json"
+  >;
+};
+export type MergeApiResponses<AR extends ApiResponses> =
+  ApiClientResponses<AR>[keyof ApiClientResponses<AR>];
 
 type UrlSchema = "http" | "https" | "about" | "blob" | "data" | "file";
 type UrlPrefix = `${UrlSchema}://` | "";

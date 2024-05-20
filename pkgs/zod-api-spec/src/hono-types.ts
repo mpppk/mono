@@ -9,7 +9,7 @@ type BlankRecordToNever<T> = T extends any
 
 export type KnownResponseFormat = "json" | "text";
 export type ResponseFormat = KnownResponseFormat | string;
-export interface TResponse<
+export interface ClientResponse<
   T,
   U extends number = StatusCode,
   F extends ResponseFormat = ResponseFormat,

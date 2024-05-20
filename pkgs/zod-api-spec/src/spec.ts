@@ -1,20 +1,11 @@
 import { z } from "zod";
-import { StatusCode, TResponse } from "./hono-types";
+import { StatusCode } from "./hono-types";
 
 export type ApiResponses = Partial<Record<StatusCode, z.ZodTypeAny>>;
-type ApiResSchema<
+export type ApiResSchema<
   AResponses extends ApiResponses,
   SC extends keyof AResponses & StatusCode,
 > = AResponses[SC] extends z.ZodTypeAny ? AResponses[SC] : never;
-type ApiClientResponses<AResponses extends ApiResponses> = {
-  [SC in keyof AResponses & StatusCode]: TResponse<
-    z.infer<ApiResSchema<AResponses, SC>>,
-    SC,
-    "json"
-  >;
-};
-export type MergeApiResponses<AR extends ApiResponses> =
-  ApiClientResponses<AR>[keyof ApiClientResponses<AR>];
 
 export interface ApiSpec<
   Params extends z.ZodTypeAny = z.ZodTypeAny,
