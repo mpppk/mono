@@ -5,22 +5,25 @@ import { wrapRouter } from "../src/express";
 
 const pathMap = {
   "/user": {
+    post: {
+      res: {
+        200: z.object({ userId: z.string() }),
+        400: z.object({ errorMessage: z.string() }),
+      },
+      body: z.object({
+        userName: z.string(),
+      }),
+    },
+  },
+  "/user/:userId": {
     get: {
       params: z.object({
-        id: z.string(),
+        userId: z.string(),
       }),
       res: {
         200: z.object({ userName: z.string() }),
         400: z.object({ errorMessage: z.string() }),
       },
-    },
-    post: {
-      res: {
-        200: z.object({ userId: z.string() }),
-      },
-      body: z.object({
-        userName: z.string(),
-      }),
     },
   },
   "/item": {
@@ -43,28 +46,23 @@ const pathMap = {
 
 const newApp = () => {
   const app = express();
+  app.use(express.json());
   const wApp = wrapRouter(pathMap, app);
-  wApp.get("/user", (req, res) => {
-    const r = res.locals.validate.params();
+  wApp.get("/user/:userId", (req, res) => {
+    const r = res.locals.validate(req).params();
     if (r.success) {
-      res.status(200).send({ userName: "user#" + r.data.id });
+      res.status(200).send({ userName: "user#" + r.data.userId });
     } else {
       res.status(400).send({ errorMessage: r.error.toString() });
     }
   });
   wApp.post("/user", (req, res) => {
-    const r = res.locals.validate.body();
+    const r = res.locals.validate(req).body();
     if (r.success) {
-      console.log(r.data.userName);
+      res.status(200).send({ userId: r.data.userName + "#0" });
+    } else {
+      res.status(400).send({ errorMessage: r.error.toString() });
     }
-    console.log(r);
-  });
-  wApp.get("/item", (req, res) => {
-    const r = res.locals.validate.res[200]();
-    console.log(r);
-  });
-  wApp.get("/event", (req, res) => {
-    console.log("hello", res.locals);
   });
   return app;
 };

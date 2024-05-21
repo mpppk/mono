@@ -1,12 +1,9 @@
 import { z } from "zod";
-import { ApiResponses, ApiSpec } from "./spec";
+import { ApiSpec } from "./spec";
 
-export type Validator<V> = () => V extends z.ZodTypeAny
-  ? ReturnType<V["safeParse"]>
-  : never;
-type ResValidators<AR extends ApiResponses> = {
-  [K in keyof AR]: Validator<AR[K]>;
+export type Validator<V extends z.ZodTypeAny | undefined> =
+  V extends z.ZodTypeAny ? () => ReturnType<V["safeParse"]> : undefined;
+export type Validators<AS extends ApiSpec> = {
+  params: Validator<AS["params"]>;
+  body: Validator<AS["body"]>;
 };
-export type Validators<E extends ApiSpec> = {
-  [K in keyof E]: Validator<E[K]>;
-} & { res: ResValidators<E["res"]> };
