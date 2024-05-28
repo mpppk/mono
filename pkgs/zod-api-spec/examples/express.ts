@@ -17,9 +17,6 @@ const pathMap = {
   },
   "/user/:userId": {
     get: {
-      params: z.object({
-        userId: z.string(),
-      }),
       res: {
         200: z.object({ userName: z.string() }),
         400: z.object({ errorMessage: z.string() }),
@@ -49,12 +46,12 @@ const newApp = () => {
   app.use(express.json());
   const wApp = wrapRouter(pathMap, app);
   wApp.get("/user/:userId", (req, res) => {
-    const r = res.locals.validate(req).params();
-    if (r.success) {
-      res.status(200).send({ userName: "user#" + r.data.userId });
-    } else {
-      res.status(400).send({ errorMessage: r.error.toString() });
+    const params = res.locals.validate(req).params();
+    if (!params.success) {
+      res.status(400).send({ errorMessage: params.error.toString() });
+      return;
     }
+    res.status(200).send({ userName: "user#" + params.data.userId });
   });
   wApp.post("/user", (req, res) => {
     const r = res.locals.validate(req).body();

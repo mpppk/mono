@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { StatusCode } from "./hono-types";
+import { ParseUrlParams } from "./url";
 
 export type ApiResponses = Partial<Record<StatusCode, z.ZodTypeAny>>;
 export type ApiResSchema<
@@ -7,24 +8,26 @@ export type ApiResSchema<
   SC extends keyof AResponses & StatusCode,
 > = AResponses[SC] extends z.ZodTypeAny ? AResponses[SC] : never;
 
+type ZodTypeWithKey<Key extends string> = z.ZodType<
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Record<Key, any>,
+  z.ZodTypeDef,
+  Record<Key, string>
+>;
 export interface ApiSpec<
-  Params extends z.ZodTypeAny = z.ZodTypeAny,
+  ParamKeys extends string = string,
+  Params extends ZodTypeWithKey<NoInfer<ParamKeys>> = ZodTypeWithKey<
+    NoInfer<ParamKeys>
+  >,
+  Query extends z.ZodTypeAny = z.ZodTypeAny,
   Body extends z.ZodTypeAny = z.ZodTypeAny,
   Response extends ApiResponses = Partial<Record<StatusCode, z.ZodTypeAny>>,
 > {
+  query?: Query;
   params?: Params;
   body?: Body;
   res: Response;
 }
-
-export type ApiSpecRes<
-  AS extends ApiSpec | undefined,
-  SC extends StatusCode,
-> = AS extends ApiSpec
-  ? AS["res"][SC] extends z.ZodTypeAny
-    ? z.infer<AS["res"][SC]>
-    : never
-  : never;
 
 export const Method = [
   "get",
@@ -36,7 +39,6 @@ export const Method = [
   "head",
 ] as const;
 export type Method = (typeof Method)[number];
-export type ApiEndpoints<Path extends string = string> = Record<
-  Path,
-  Partial<Record<Method, ApiSpec>>
->;
+export type ApiEndpoints = {
+  [K in string]: Partial<Record<Method, ApiSpec<ParseUrlParams<K>>>>;
+};

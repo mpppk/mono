@@ -1,6 +1,7 @@
 import { ApiEndpoints, ApiResponses, ApiResSchema, Method } from "./spec";
 import { StatusCode, ClientResponse } from "./hono-types";
 import { z } from "zod";
+import { ToUrlParamPattern } from "./url";
 
 interface TRequestInit<M extends Method> extends RequestInit {
   method?: M;
@@ -23,7 +24,7 @@ export type TFetch<Origin extends URL, E extends ApiEndpoints> = <
   Path extends keyof E & string,
   M extends Method = "get",
 >(
-  input: `${Origin}${Path}`,
+  input: ToUrlParamPattern<`${Origin}${Path}`>,
   init?: TRequestInit<M>,
   // FIXME: NonNullable
 ) => Promise<MergeApiResponses<NonNullable<E[Path][M]>["res"]>>;

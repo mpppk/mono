@@ -9,6 +9,7 @@ import {
 } from "express-serve-static-core";
 import { StatusCode } from "./hono-types";
 import { z } from "zod";
+import { ParseUrlParams } from "./url";
 
 type Handler<
   Spec extends ApiSpec | undefined,
@@ -43,8 +44,11 @@ type ExpressResponse<
   ) => Response<z.infer<ApiResSchema<Responses, SC>>, LocalsObj, SC>;
 };
 
-type ValidateLocals<AS extends ApiSpec | undefined> = AS extends ApiSpec
-  ? { validate: (req: Request) => Validators<AS> }
+type ValidateLocals<
+  AS extends ApiSpec | undefined,
+  QueryKeys extends string,
+> = AS extends ApiSpec
+  ? { validate: (req: Request) => Validators<AS, QueryKeys> }
   : Record<string, never>;
 
 type TRouter<
@@ -54,7 +58,11 @@ type TRouter<
   [M in Method]: <Path extends string & keyof Endpoints>(
     path: Path,
     ...handlers: Array<
-      Handler<Endpoints[Path][M], SC, ValidateLocals<Endpoints[Path][M]>>
+      Handler<
+        Endpoints[Path][M],
+        SC,
+        ValidateLocals<Endpoints[Path][M], ParseUrlParams<Path>>
+      >
     >
   ) => TRouter<Endpoints, SC>;
 };

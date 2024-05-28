@@ -1,13 +1,11 @@
 import { z } from "zod";
-import { ApiEndpoints } from "./";
+import { ApiEndpoints, ApiSpec } from "./";
 import { TFetch } from "./";
+import { ParseUrlParams } from "./url";
 
 const pathMap = {
   "/user": {
     get: {
-      params: z.object({
-        id: z.string(),
-      }),
       res: {
         200: z.object({ userName: z.string() }),
         400: z.object({ message: z.string() }),
@@ -20,6 +18,14 @@ const pathMap = {
       body: z.object({
         name: z.string(),
       }),
+    },
+  },
+  [`/org/:orgId/users/:userId`]: {
+    get: {
+      res: {
+        200: z.object({ userName: z.string() }),
+        400: z.object({ message: z.string() }),
+      },
     },
   },
 } satisfies ApiEndpoints;
@@ -59,6 +65,13 @@ const main = async () => {
   if (res2.ok) {
     const r = await res2.json();
     console.log(r.userId);
+  }
+
+  // path variableを含むURLの場合
+  const res3 = await fetch2(`${origin}/org/org1/users/user1`);
+  if (res3.ok) {
+    const r = await res3.json();
+    console.log(r.userName);
   }
 };
 
