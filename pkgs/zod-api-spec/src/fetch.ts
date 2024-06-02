@@ -1,7 +1,13 @@
-import { ApiEndpoints, ApiResponses, ApiResSchema, Method } from "./spec";
+import {
+  ApiEndpoints,
+  ApiResponses,
+  ApiResSchema,
+  MatchedPatterns,
+  Method,
+} from "./spec";
 import { StatusCode, ClientResponse } from "./hono-types";
 import { z } from "zod";
-import { ToUrlParamPattern } from "./url";
+import { ParseURL, ToUrlParamPattern } from "./url";
 
 interface TRequestInit<M extends Method> extends RequestInit {
   method?: M;
@@ -19,12 +25,14 @@ export type MergeApiResponses<AR extends ApiResponses> =
 
 type UrlSchema = "http" | "https" | "about" | "blob" | "data" | "file";
 type UrlPrefix = `${UrlSchema}://` | "";
-type URL = `${UrlPrefix}${string}`;
-export type TFetch<Origin extends URL, E extends ApiEndpoints> = <
-  Path extends keyof E & string,
+type OriginPattern = `${UrlPrefix}${string}`;
+export type TFetch<Origin extends OriginPattern, E extends ApiEndpoints> = <
+  Input extends `${Origin}${string}`,
+  InputPath extends ParseURL<Input>["path"],
+  CandidatePaths extends MatchedPatterns<E, InputPath>,
   M extends Method = "get",
 >(
-  input: ToUrlParamPattern<`${Origin}${Path}`>,
+  input: ToUrlParamPattern<Input>,
   init?: TRequestInit<M>,
   // FIXME: NonNullable
-) => Promise<MergeApiResponses<NonNullable<E[Path][M]>["res"]>>;
+) => Promise<MergeApiResponses<NonNullable<E[CandidatePaths][M]>["res"]>>;

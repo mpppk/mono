@@ -12,6 +12,33 @@ export type ToUrlParamPattern<T> = T extends `${infer O}:${infer R}`
     : `${O}${string}`
   : T;
 
+type KV<
+  M extends Record<string, string>,
+  T extends string,
+> = T extends `${infer K}=${infer V}`
+  ? K extends keyof M
+    ? V extends M[K]
+      ? `${K}=${M[K]}`
+      : never
+    : never
+  : never;
+export type UrlQueryPattern<
+  M extends Record<string, string>,
+  T extends string,
+> = T extends `${infer O}&${infer R}`
+  ? `${KV<M, O>}&${UrlQueryPattern<M, R>}`
+  : KV<M, T>;
+export type UrlPattern<
+  M extends Record<string, string>,
+  T extends string,
+> = T extends `${infer O}?${infer R}`
+  ? `${ToUrlParamPattern<O>}?${UrlQueryPattern<M, R>}`
+  : ToUrlParamPattern<T>;
+
+export type ToUrlPattern<T> = T extends `${infer O}?${infer R}`
+  ? `${ToUrlParamPattern<O>}?${ToUrlPattern<R>}`
+  : ToUrlParamPattern<T>;
+
 type UrlSchema = "http" | "https" | "data" | "blob" | "about" | "file";
 type ParseHostAndPort<T> =
   T extends `${infer Host}:${infer Port extends `${number}`}`
@@ -36,7 +63,7 @@ type SplitUrlAndQueryString<S extends string> =
 export type ParseURL<T extends string> = ParseOrigin<
   SplitUrlAndQueryString<T>["url"]
 > & {
-  params: SplitUrlAndQueryString<T>["qs"] extends string
+  query: SplitUrlAndQueryString<T>["qs"] extends string
     ? ParseQueryString<SplitUrlAndQueryString<T>["qs"]>
     : Record<string, never>;
 };

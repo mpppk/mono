@@ -1,12 +1,23 @@
 import { z } from "zod";
 import { StatusCode } from "./hono-types";
-import { ParseUrlParams } from "./url";
+import { ParseUrlParams, ToUrlPattern } from "./url";
 
 export type ApiResponses = Partial<Record<StatusCode, z.ZodTypeAny>>;
 export type ApiResSchema<
   AResponses extends ApiResponses,
   SC extends keyof AResponses & StatusCode,
 > = AResponses[SC] extends z.ZodTypeAny ? AResponses[SC] : never;
+export type ApiQuerySchema<
+  E extends ApiEndpoints,
+  Path extends keyof E & string,
+  M extends Method,
+> = E[Path] extends undefined
+  ? never
+  : E[Path][M] extends undefined
+    ? never
+    : NonNullable<E[Path][M]>["query"] extends undefined
+      ? never
+      : NonNullable<NonNullable<E[Path][M]>["query"]>;
 
 type ZodTypeWithKey<Key extends string> = z.ZodType<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -41,4 +52,8 @@ export const Method = [
 export type Method = (typeof Method)[number];
 export type ApiEndpoints = {
   [K in string]: Partial<Record<Method, ApiSpec<ParseUrlParams<K>>>>;
+};
+
+export type MatchedPatterns<E extends ApiEndpoints, T extends string> = keyof {
+  [K in keyof E as T extends ToUrlPattern<K> ? K : never]: true;
 };
