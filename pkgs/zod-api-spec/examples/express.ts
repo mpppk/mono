@@ -1,10 +1,10 @@
 import express from "express";
 import { z } from "zod";
 import { ApiEndpoints } from "../src";
-import { wrapRouter } from "../src/express";
+import { typed } from "../src/express";
 
 const pathMap = {
-  "/user": {
+  "/users": {
     post: {
       res: {
         200: z.object({ userId: z.string() }),
@@ -15,7 +15,7 @@ const pathMap = {
       }),
     },
   },
-  "/user/:userId": {
+  "/users/:userId": {
     get: {
       res: {
         200: z.object({ userName: z.string() }),
@@ -23,38 +23,22 @@ const pathMap = {
       },
     },
   },
-  "/item": {
-    get: {
-      res: {
-        200: z.object({ itemId: z.number() }),
-      },
-    },
-    post: {
-      res: {
-        200: z.object({ text: z.string() }),
-      },
-      body: z.object({
-        name: z.string(),
-      }),
-    },
-  },
-  "/event": {},
 } satisfies ApiEndpoints;
 
 const newApp = () => {
   const app = express();
   app.use(express.json());
-  const wApp = wrapRouter(pathMap, app);
-  wApp.get("/user/:userId", (req, res) => {
-    const params = res.locals.validate(req).params();
+  const wApp = typed(pathMap, app);
+  wApp.get("/users/:userId", (req, res) => {
+    const params = res.locals.validate.params();
     if (!params.success) {
       res.status(400).send({ errorMessage: params.error.toString() });
       return;
     }
     res.status(200).send({ userName: "user#" + params.data.userId });
   });
-  wApp.post("/user", (req, res) => {
-    const r = res.locals.validate(req).body();
+  wApp.post("/users", (req, res) => {
+    const r = res.locals.validate.body();
     if (r.success) {
       res.status(200).send({ userId: r.data.userName + "#0" });
     } else {

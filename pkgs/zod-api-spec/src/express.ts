@@ -18,14 +18,7 @@ type Handler<
   Locals extends Record<string, any> = Record<string, never>,
 > = (
   // FIXME: strict type
-  req: Request<
-    ParamsDictionary,
-    // ApiSpecRes<NonNullable<Spec>, SC>,
-    any,
-    any,
-    any,
-    Locals
-  >,
+  req: Request<ParamsDictionary, unknown, unknown, unknown, Locals>,
   res: ExpressResponse<NonNullable<Spec>["res"], SC, Locals>,
   next: NextFunction,
 ) => void;
@@ -48,7 +41,7 @@ type ValidateLocals<
   AS extends ApiSpec | undefined,
   QueryKeys extends string,
 > = AS extends ApiSpec
-  ? { validate: (req: Request) => Validators<AS, QueryKeys> }
+  ? { validate: Validators<AS, QueryKeys> }
   : Record<string, never>;
 
 type TRouter<
@@ -67,15 +60,19 @@ type TRouter<
   ) => TRouter<Endpoints, SC>;
 };
 
-export const wrapRouter = <const Endpoints extends ApiEndpoints>(
+const validatorMiddleware = (pathMap: ApiEndpoints) => {
+  const validator = newValidator(pathMap);
+  return (_req: Request, res: Response, next: NextFunction) => {
+    res.locals.validate = validator;
+    next();
+  };
+};
+
+export const typed = <const Endpoints extends ApiEndpoints>(
   pathMap: Endpoints,
   router: Router,
 ): TRouter<Endpoints> => {
-  const validator = newValidator(pathMap);
-  router.use((req, res, next) => {
-    res.locals.validate = validator;
-    next();
-  });
+  router.use(validatorMiddleware(pathMap));
   return router;
 };
 

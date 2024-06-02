@@ -1,14 +1,30 @@
 import { Router } from "express";
 import { z } from "zod";
 import { ApiEndpoints } from "./spec";
-import { wrapRouter } from "./express";
+import { typed } from "./express";
 
 const pathMap = {
-  "/user": {
+  "/users": {
     get: {
-      params: z.object({
-        id: z.string(),
+      query: z.object({
+        page: z.string(),
       }),
+      res: {
+        200: z.object({ userNames: z.string().array() }),
+      },
+    },
+    post: {
+      res: {
+        200: z.object({ userId: z.string() }),
+      },
+      body: z.object({
+        userName: z.string(),
+      }),
+    },
+  },
+  "/users/:userId": {
+    get: {
+      params: z.object({ userId: z.string() }),
       res: {
         200: z.object({ userName: z.string() }),
       },
@@ -22,46 +38,31 @@ const pathMap = {
       }),
     },
   },
-  "/item": {
-    get: {
-      res: {
-        200: z.object({ itemId: z.number() }),
-      },
-    },
-    post: {
-      res: {
-        200: z.object({ text: z.string() }),
-      },
-      body: z.object({
-        name: z.string(),
-      }),
-    },
-  },
-  "/event": {},
 } satisfies ApiEndpoints;
 
 const main = async () => {
-  const wRouter = wrapRouter(pathMap, Router());
-  wRouter.get("/user", (req, res) => {
-    const r = res.locals.validate.params();
+  const wRouter = typed(pathMap, Router());
+  wRouter.get("/users", (req, res) => {
+    // @ts-expect-error params is not defined
+    res.locals.validate.params();
+
+    const r = res.locals.validate.query();
     if (r.success) {
-      console.log(r.data.id);
+      console.log(r.data.page);
     }
-    console.log(r);
+    res.status(200).json({ userNames: ["user1", "user2"] });
   });
-  wRouter.post("/user", (req, res) => {
+  wRouter.post("/users", (req, res) => {
     const r = res.locals.validate.body();
     if (r.success) {
-      console.log(r.data.userName);
+      res.status(200).json({ userId: r.data.userName + "#0" });
     }
-    console.log(r);
   });
-  wRouter.get("/item", (req, res) => {
-    const r = res.locals.validate.res[200]();
-    console.log(r);
-  });
-  wRouter.get("/event", (req, res) => {
-    console.log("hello", res.locals);
+  wRouter.get("/users/:userId", (req, res) => {
+    const r = res.locals.validate.params();
+    if (r.success) {
+      res.status(200).json({ userName: r.data.userId + ":userName" });
+    }
   });
 };
 
