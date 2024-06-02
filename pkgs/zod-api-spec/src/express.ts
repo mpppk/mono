@@ -41,7 +41,11 @@ type ValidateLocals<
   AS extends ApiSpec | undefined,
   QueryKeys extends string,
 > = AS extends ApiSpec
-  ? { validate: Validators<AS, QueryKeys> }
+  ? {
+      validate: (
+        req: Request<ParamsDictionary, unknown, unknown, unknown>,
+      ) => Validators<AS, QueryKeys>;
+    }
   : Record<string, never>;
 
 type TRouter<
@@ -82,13 +86,6 @@ export const newValidator = <E extends ApiEndpoints>(endpoints: E) => {
   ) => {
     const spec: E[Path][M] =
       endpoints[req.route.path][req.method.toLowerCase() as Method];
-    console.log(
-      "spec",
-      req.route.path,
-      req.method,
-      req.body.userName,
-      req.body,
-    );
     return {
       params: () =>
         spec?.params?.safeParse(req.params) as E[Path][M] extends ApiSpec
@@ -97,6 +94,10 @@ export const newValidator = <E extends ApiEndpoints>(endpoints: E) => {
       body: () =>
         spec?.body?.safeParse(req.body) as E[Path][M] extends ApiSpec
           ? Validator<E[Path][M]["body"]>
+          : undefined,
+      query: () =>
+        spec?.query?.safeParse(req.query) as E[Path][M] extends ApiSpec
+          ? Validator<E[Path][M]["query"]>
           : undefined,
     };
   };

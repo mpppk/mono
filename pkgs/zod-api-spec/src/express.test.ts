@@ -46,20 +46,20 @@ const main = async () => {
     // @ts-expect-error params is not defined
     res.locals.validate.params();
 
-    const r = res.locals.validate.query();
+    const r = res.locals.validate(req).query();
     if (r.success) {
       console.log(r.data.page);
     }
     res.status(200).json({ userNames: ["user1", "user2"] });
   });
   wRouter.post("/users", (req, res) => {
-    const r = res.locals.validate.body();
+    const r = res.locals.validate(req).body();
     if (r.success) {
       res.status(200).json({ userId: r.data.userName + "#0" });
     }
   });
   wRouter.get("/users/:userId", (req, res) => {
-    const r = res.locals.validate.params();
+    const r = res.locals.validate(req).params();
     if (r.success) {
       res.status(200).json({ userName: r.data.userId + ":userName" });
     }
