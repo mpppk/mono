@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { StatusCode } from "./hono-types";
-import { ParseUrlParams, ToUrlPattern } from "./url";
+import { ParseUrlParams } from "./url";
 
 export type ApiResponses = Partial<Record<StatusCode, z.ZodTypeAny>>;
 export type ApiResSchema<
@@ -52,8 +52,4 @@ export const Method = [
 export type Method = (typeof Method)[number];
 export type ApiEndpoints = {
   [K in string]: Partial<Record<Method, ApiSpec<ParseUrlParams<K>>>>;
-};
-
-export type MatchedPatterns<E extends ApiEndpoints, T extends string> = keyof {
-  [K in keyof E as T extends ToUrlPattern<K> ? K : never]: true;
 };

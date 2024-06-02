@@ -75,9 +75,9 @@ const main = async () => {
 
   // path variableを含むURLの場合
   {
-    const res = await fetch2(`${origin}/org/org1/users/user1`);
-    if (res.ok) {
-      const r = await res.json();
+    const res3 = await fetch2(`${origin}/org/org1/users/user1`);
+    if (res3.ok) {
+      const r = await res3.json();
       console.log(r.userName2);
     }
   }

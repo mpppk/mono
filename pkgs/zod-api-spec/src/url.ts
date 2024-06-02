@@ -1,4 +1,5 @@
 import { ParseQueryString } from "./query-string";
+import { ApiEndpoints } from "./spec";
 
 export type ParseUrlParams<T> = T extends `${string}:${infer R}`
   ? R extends `${infer P}/${infer L}`
@@ -6,6 +7,9 @@ export type ParseUrlParams<T> = T extends `${string}:${infer R}`
     : R
   : never;
 
+export type UrlSchema = "http" | "https" | "about" | "blob" | "data" | "file";
+type UrlPrefix = `${UrlSchema}://` | "";
+export type OriginPattern = `${UrlPrefix}${string}`;
 export type ToUrlParamPattern<T> = T extends `${infer O}:${infer R}`
   ? R extends `${string}/${infer L}`
     ? `${O}${string}/${ToUrlParamPattern<L>}`
@@ -39,7 +43,10 @@ export type ToUrlPattern<T> = T extends `${infer O}?${infer R}`
   ? `${ToUrlParamPattern<O>}?${ToUrlPattern<R>}`
   : ToUrlParamPattern<T>;
 
-type UrlSchema = "http" | "https" | "data" | "blob" | "about" | "file";
+export type MatchedPatterns<E extends ApiEndpoints, T extends string> = keyof {
+  [K in keyof E as T extends ToUrlPattern<K> ? K : never]: true;
+};
+
 type ParseHostAndPort<T> =
   T extends `${infer Host}:${infer Port extends `${number}`}`
     ? { host: Host; port: Port }
