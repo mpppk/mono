@@ -11,7 +11,8 @@
     "test:lint": "eslint .",
     "test:format": "prettier --check .",
     "test:type-check": "tsc --noEmit",
-    "op:inject": "op inject -i sample.env -o .env"
+    "op:inject": "op inject -i sample.env -o .env",
+    "tasks:irasutoya-words": "tsx src/tasks/irasutoya-words.ts"
   },
   "author": "mpppk",
   "license": "ISC",
