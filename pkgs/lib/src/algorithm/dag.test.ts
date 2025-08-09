@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { DAG, FindPathOptions, Nodes, Path } from "./dag";
-import { DagForest, FindPartialPathOp } from "./dag-forest";
-import { NodeID } from "./values";
+import { DAG, type FindPathOptions, Nodes, type Path } from "./dag";
+import { DagForest, type FindPartialPathOp } from "./dag-forest";
+import type { NodeID } from "./values";
 
 describe("Nodes.getFromHex", () => {
   it("string", () => {
@@ -40,6 +40,29 @@ describe("Nodes.getId", () => {
     const nodes = new Nodes<{ a: number }>((n) => n.a.toString());
     const nodeId = nodes.add({ a: 1 });
     expect(nodes.getId({ a: 1 })).toEqual(nodeId);
+  });
+});
+
+describe("Nodes duplicate labels", () => {
+  it("allows multiple nodes with the same label and lists all IDs via getIdsByHex", () => {
+    const nodes = new Nodes<string>();
+    const id1 = nodes.add("a");
+    const id2 = nodes.add("a");
+    expect(id1).not.toEqual(id2);
+    expect(nodes.get(id1)).toEqual("a");
+    expect(nodes.get(id2)).toEqual("a");
+    const ids = nodes.getIdsByHex("a");
+    expect(ids.length).toBe(2);
+    expect(ids).toContain(id1);
+    expect(ids).toContain(id2);
+  });
+
+  it("getIdByHex/getByHex return the first inserted ID/value for backward compatibility", () => {
+    const nodes = new Nodes<string>();
+    const id1 = nodes.add("a");
+    nodes.add("a");
+    expect(nodes.getIdByHex("a")).toEqual(id1);
+    expect(nodes.getByHex("a")).toEqual("a");
   });
 });
 
@@ -351,7 +374,7 @@ describe("dfs", () => {
     dag1.edges.add(b, d, 0);
 
     const g = dag1.dfs();
-    let op: undefined | "skip" = undefined;
+    let op: undefined | "skip";
     const paths = [];
     for (let v = g.next(); !v.done; v = g.next(op)) {
       const path = v.value;

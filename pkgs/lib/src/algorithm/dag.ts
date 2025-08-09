@@ -1,7 +1,7 @@
-import { NodeID } from "./values";
-import { debugPrefix, isUnique, NonEmptyArray } from "../common";
-import { newPriorityQueueDebugger, PriorityQueue } from "./priority-queue";
 import createDebug from "debug";
+import { debugPrefix, isUnique, type NonEmptyArray } from "../common";
+import { newPriorityQueueDebugger, PriorityQueue } from "./priority-queue";
+import { NodeID } from "./values";
 
 const debug = createDebug(debugPrefix.alg + ":dag");
 
@@ -20,6 +20,8 @@ export class Nodes<T> {
 
   public nodes: Map<NodeID, T> = new Map();
   private hexToIDMap: Map<string, NodeID> = new Map();
+  // label(=toHex) -> all NodeIDs having that label
+  private labelIndex: Map<string, Set<NodeID>> = new Map();
 
   private nextID = 0;
   private newID(): NodeID {
@@ -28,12 +30,16 @@ export class Nodes<T> {
 
   public add(node: T): NodeID {
     const hex = this.toHex(node);
-    if (this.hexToIDMap.has(hex)) {
-      return this.hexToIDMap.get(hex)!;
-    }
     const id = this.newID();
-    this.hexToIDMap.set(hex, id);
     this.nodes.set(id, node);
+    // Keep the first inserted ID for this label for backward-compatible getters
+    if (!this.hexToIDMap.has(hex)) {
+      this.hexToIDMap.set(hex, id);
+    }
+    // Index all IDs by label to support duplicates
+    const set = this.labelIndex.get(hex) ?? new Set<NodeID>();
+    set.add(id);
+    this.labelIndex.set(hex, set);
     return id;
   }
 
@@ -59,6 +65,13 @@ export class Nodes<T> {
 
   public getIdByHex(hex: string): NodeID | undefined {
     return this.hexToIDMap.get(hex);
+  }
+
+  /**
+   * Return all NodeIDs that have the given label (hex). Empty array if none.
+   */
+  public getIdsByHex(hex: string): NodeID[] {
+    return Array.from(this.labelIndex.get(hex) ?? []);
   }
 
   public safeGet(id: NodeID): T | undefined {
