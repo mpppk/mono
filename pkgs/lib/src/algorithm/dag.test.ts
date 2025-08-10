@@ -307,6 +307,68 @@ describe("DAG.findWaypointPath cost", () => {
   });
 });
 
+describe("find* with duplicate labels", () => {
+  it("findPath: respects from when multiple roots share the same label", () => {
+    const dag = new DAG<string, number>(new Nodes());
+    const a1 = dag.nodes.add("a");
+    const a2 = dag.nodes.add("a");
+    const b = dag.nodes.add("b");
+    const c = dag.nodes.add("c");
+    const e = dag.nodes.add("e");
+    dag.edges.add(a1, b, 1);
+    dag.edges.add(b, e, 1);
+    dag.edges.add(a2, c, 1);
+    dag.edges.add(c, e, 1);
+    const opt: FindPathOptions<string, number> = {
+      defaultCost: 1,
+      costF: (edge) => edge.value,
+    };
+    const pathsFromA1 = [...dag.findPath({ from: a1, to: e, ...opt })];
+    const pathsFromA2 = [...dag.findPath({ from: a2, to: e, ...opt })];
+    expect(pathsFromA1).toEqual([{ path: [a1, b, e], cost: 3 }]);
+    expect(pathsFromA2).toEqual([{ path: [a2, c, e], cost: 3 }]);
+  });
+
+  it("findShortestPath: can yield multiple minimal paths when duplicates exist", () => {
+    const dag = new DAG<string, number>(new Nodes());
+    const a1 = dag.nodes.add("a");
+    const a2 = dag.nodes.add("a");
+    const b = dag.nodes.add("b");
+    const c = dag.nodes.add("c");
+    const e = dag.nodes.add("e");
+    dag.edges.add(a1, b, 1);
+    dag.edges.add(b, e, 1);
+    dag.edges.add(a2, c, 1);
+    dag.edges.add(c, e, 1);
+    const opt: FindPathOptions<string, number> = {
+      defaultCost: 0,
+      costF: (edge) => edge.value,
+    };
+    const paths = [...dag.findShortestPath({ to: e, ...opt })];
+    // Both a1->b->e and a2->c->e have the same minimal total cost (2)
+    expect(paths).toEqual([
+      { path: [a1, b, e], cost: 2 },
+      { path: [a2, c, e], cost: 2 },
+    ]);
+  });
+
+  it("findWaypointPath: yields paths for each duplicate root passing through the waypoint", () => {
+    const dag = new DAG<string, number>(new Nodes());
+    const a1 = dag.nodes.add("a");
+    const a2 = dag.nodes.add("a");
+    const b = dag.nodes.add("b");
+    const d = dag.nodes.add("d");
+    dag.edges.add(a1, b, 0);
+    dag.edges.add(a2, b, 0);
+    dag.edges.add(b, d, 0);
+    const paths = [...dag.findWaypointPath([b])];
+    expect(paths).toEqual([
+      { path: [a1, b, d], cost: 0 },
+      { path: [a2, b, d], cost: 0 },
+    ]);
+  });
+});
+
 describe("roots", () => {
   it("should return empty array if does not have any node", () => {
     const nodes = new Nodes<string>();
