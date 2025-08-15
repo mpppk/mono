@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { DAG, FindPathOptions, Nodes, Path } from "./dag";
-import { DagForest, FindPartialPathOp } from "./dag-forest";
-import { NodeID } from "./values";
+import { DAG, type FindPathOptions, Nodes, type Path } from "./dag";
+import { DagForest, type FindPartialPathOp } from "./dag-forest";
+import type { NodeID } from "./values";
 
 describe("Nodes.getFromHex", () => {
   it("string", () => {
@@ -40,6 +40,29 @@ describe("Nodes.getId", () => {
     const nodes = new Nodes<{ a: number }>((n) => n.a.toString());
     const nodeId = nodes.add({ a: 1 });
     expect(nodes.getId({ a: 1 })).toEqual(nodeId);
+  });
+});
+
+describe("Nodes duplicate labels", () => {
+  it("allows multiple nodes with the same label and lists all IDs via getIdsByHex", () => {
+    const nodes = new Nodes<string>();
+    const id1 = nodes.add("a");
+    const id2 = nodes.add("a");
+    expect(id1).not.toEqual(id2);
+    expect(nodes.get(id1)).toEqual("a");
+    expect(nodes.get(id2)).toEqual("a");
+    const ids = nodes.getIdsByHex("a");
+    expect(ids.length).toBe(2);
+    expect(ids).toContain(id1);
+    expect(ids).toContain(id2);
+  });
+
+  it("getIdByHex/getByHex return the first inserted ID/value for backward compatibility", () => {
+    const nodes = new Nodes<string>();
+    const id1 = nodes.add("a");
+    nodes.add("a");
+    expect(nodes.getIdByHex("a")).toEqual(id1);
+    expect(nodes.getByHex("a")).toEqual("a");
   });
 });
 
@@ -284,6 +307,68 @@ describe("DAG.findWaypointPath cost", () => {
   });
 });
 
+describe("find* with duplicate labels", () => {
+  it("findPath: respects from when multiple roots share the same label", () => {
+    const dag = new DAG<string, number>(new Nodes());
+    const a1 = dag.nodes.add("a");
+    const a2 = dag.nodes.add("a");
+    const b = dag.nodes.add("b");
+    const c = dag.nodes.add("c");
+    const e = dag.nodes.add("e");
+    dag.edges.add(a1, b, 1);
+    dag.edges.add(b, e, 1);
+    dag.edges.add(a2, c, 1);
+    dag.edges.add(c, e, 1);
+    const opt: FindPathOptions<string, number> = {
+      defaultCost: 1,
+      costF: (edge) => edge.value,
+    };
+    const pathsFromA1 = [...dag.findPath({ from: a1, to: e, ...opt })];
+    const pathsFromA2 = [...dag.findPath({ from: a2, to: e, ...opt })];
+    expect(pathsFromA1).toEqual([{ path: [a1, b, e], cost: 3 }]);
+    expect(pathsFromA2).toEqual([{ path: [a2, c, e], cost: 3 }]);
+  });
+
+  it("findShortestPath: can yield multiple minimal paths when duplicates exist", () => {
+    const dag = new DAG<string, number>(new Nodes());
+    const a1 = dag.nodes.add("a");
+    const a2 = dag.nodes.add("a");
+    const b = dag.nodes.add("b");
+    const c = dag.nodes.add("c");
+    const e = dag.nodes.add("e");
+    dag.edges.add(a1, b, 1);
+    dag.edges.add(b, e, 1);
+    dag.edges.add(a2, c, 1);
+    dag.edges.add(c, e, 1);
+    const opt: FindPathOptions<string, number> = {
+      defaultCost: 0,
+      costF: (edge) => edge.value,
+    };
+    const paths = [...dag.findShortestPath({ to: e, ...opt })];
+    // Both a1->b->e and a2->c->e have the same minimal total cost (2)
+    expect(paths).toEqual([
+      { path: [a1, b, e], cost: 2 },
+      { path: [a2, c, e], cost: 2 },
+    ]);
+  });
+
+  it("findWaypointPath: yields paths for each duplicate root passing through the waypoint", () => {
+    const dag = new DAG<string, number>(new Nodes());
+    const a1 = dag.nodes.add("a");
+    const a2 = dag.nodes.add("a");
+    const b = dag.nodes.add("b");
+    const d = dag.nodes.add("d");
+    dag.edges.add(a1, b, 0);
+    dag.edges.add(a2, b, 0);
+    dag.edges.add(b, d, 0);
+    const paths = [...dag.findWaypointPath([b])];
+    expect(paths).toEqual([
+      { path: [a1, b, d], cost: 0 },
+      { path: [a2, b, d], cost: 0 },
+    ]);
+  });
+});
+
 describe("roots", () => {
   it("should return empty array if does not have any node", () => {
     const nodes = new Nodes<string>();
@@ -351,7 +436,7 @@ describe("dfs", () => {
     dag1.edges.add(b, d, 0);
 
     const g = dag1.dfs();
-    let op: undefined | "skip" = undefined;
+    let op: undefined | "skip";
     const paths = [];
     for (let v = g.next(); !v.done; v = g.next(op)) {
       const path = v.value;
