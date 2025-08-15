@@ -85,7 +85,7 @@ describe("SuccinctBitVector", () => {
       const sbv = new SuccinctBitVector(pattern);
 
       expect(sbv.length()).toBe(100);
-      
+
       // Test some rank operations
       expect(sbv.rank1(0)).toBe(0);
       expect(sbv.rank1(2)).toBe(1); // [0,1] -> 1 one
@@ -112,7 +112,7 @@ describe("SuccinctBitVector", () => {
     it("should work for DAG edge boundary marking", () => {
       // Simulate DAG with 4 nodes:
       // Node 0: 2 edges
-      // Node 1: 0 edges  
+      // Node 1: 0 edges
       // Node 2: 3 edges
       // Node 3: 1 edge
       // Boundary pattern: [0,0,1,0,0,0,1,0] (1s mark start of new node's edges)
@@ -124,10 +124,10 @@ describe("SuccinctBitVector", () => {
       // Node 1 would start at position 2 (after node 0's 2 edges)
       // Node 2 starts at position 2 (first 1)
       // Node 3 starts at position 6 (second 1)
-      
+
       expect(sbv.select(1, 0)).toBe(2); // Node 2 starts at position 2
       expect(sbv.select(1, 1)).toBe(6); // Node 3 starts at position 6
-      
+
       // Count edges before each boundary
       expect(sbv.rank0(2)).toBe(2); // 2 edges before Node 2
       expect(sbv.rank0(6)).toBe(5); // 5 edges before Node 3
