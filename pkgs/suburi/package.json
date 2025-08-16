@@ -30,6 +30,6 @@
     "zod": "^3.21.4"
   },
   "dependencies": {
-    "@elastic/elasticsearch": "^8.11.0"
+    "@elastic/elasticsearch": "^9.0.0"
   }
 }
