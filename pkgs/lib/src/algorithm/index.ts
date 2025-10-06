@@ -5,3 +5,5 @@ export * from "./heap";
 export * from "./priority-queue";
 export * from "./string";
 export * from "./values";
+export * from "./wavelet-tree";
+export * from "./wavelet-edges";
