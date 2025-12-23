@@ -102,10 +102,29 @@ type EdgesHandler<T> = (
   from: NodeID,
   to: NodeID,
   value: T,
-  self: Edges<T>,
+  self: IEdges<T>,
 ) => void;
 
-class Edges<T> {
+/**
+ * Interface for edge storage implementations
+ */
+export interface IEdges<T> {
+  addHandler(handler: EdgesHandler<T>): void;
+  add(from: NodeID, to: NodeID, value: T): void;
+  get(from: NodeID):
+    | {
+        parent: Edge<T>[];
+        children: Edge<T>[];
+      }
+    | undefined;
+  getValue(from: NodeID, to: NodeID): T;
+  serialize(): {
+    parent: [NodeID, [NodeID, T][]][];
+    children: [NodeID, [NodeID, T][]][];
+  };
+}
+
+class Edges<T> implements IEdges<T> {
   public edges: Map<NodeID, Edge<T>[]> = new Map();
   public revEdges: Map<NodeID, Edge<T>[]> = new Map();
   private handlers: EdgesHandler<T>[] = [];
@@ -151,13 +170,18 @@ class Edges<T> {
     return edge.value;
   }
 
-  public serialize() {
-    const parent = [...this.revEdges.entries()].map(([to, edges]) => {
-      return [to, edges.map((e) => [e.from, e.value])];
-    });
-    const children = [...this.edges.entries()].map(([from, edges]) => {
-      return [from, edges.map((e) => [e.to, e.value])];
-    });
+  public serialize(): {
+    parent: [NodeID, [NodeID, T][]][];
+    children: [NodeID, [NodeID, T][]][];
+  } {
+    const parent = [...this.revEdges.entries()].map(
+      ([to, edges]) =>
+        [to, edges.map((e) => [e.from, e.value])] as [NodeID, [NodeID, T][]],
+    );
+    const children = [...this.edges.entries()].map(
+      ([from, edges]) =>
+        [from, edges.map((e) => [e.to, e.value])] as [NodeID, [NodeID, T][]],
+    );
     return { parent, children };
   }
 }
@@ -211,15 +235,22 @@ type NodeHandler<T> = (id: NodeID, node: T, self: Nodes<T>) => void;
 
 export class DAG<Node, EdgeValue> {
   public nodes: Nodes<Node>;
-  public edges: Edges<EdgeValue> = new Edges();
+  public edges: IEdges<EdgeValue>;
   public nodeSet = new Set<NodeID>();
   private nodeHandlers: NodeHandler<Node>[];
   public addNodeHandler(handler: NodeHandler<Node>) {
     this.nodeHandlers.push(handler);
   }
-  constructor(readonly _nodes: Nodes<Node> = new Nodes()) {
+  constructor(
+    readonly _nodes: Nodes<Node> = new Nodes(),
+    edgesImpl?: IEdges<EdgeValue>,
+  ) {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
+
+    // Use provided edges implementation or default to Edges
+    this.edges = edgesImpl ?? new Edges<EdgeValue>();
+
     this.nodeHandlers = [
       (id) => {
         this.nodeSet.add(id);
