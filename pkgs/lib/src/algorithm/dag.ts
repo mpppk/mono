@@ -2,6 +2,7 @@ import createDebug from "debug";
 import { debugPrefix, isUnique, type NonEmptyArray } from "../common";
 import { newPriorityQueueDebugger, PriorityQueue } from "./priority-queue";
 import { NodeID } from "./values";
+import { WaveletEdges } from "./wavelet-edges";
 
 const debug = createDebug(debugPrefix.alg + ":dag");
 
@@ -98,70 +99,6 @@ type Edge<T> = {
   value: T;
 };
 
-type EdgesHandler<T> = (
-  from: NodeID,
-  to: NodeID,
-  value: T,
-  self: Edges<T>,
-) => void;
-
-class Edges<T> {
-  public edges: Map<NodeID, Edge<T>[]> = new Map();
-  public revEdges: Map<NodeID, Edge<T>[]> = new Map();
-  private handlers: EdgesHandler<T>[] = [];
-  public addHandler(handler: EdgesHandler<T>) {
-    this.handlers.push(handler);
-  }
-  constructor() {}
-  public add(from: NodeID, to: NodeID, value: T): void {
-    const edges = this.edges.get(from) ?? [];
-    edges.push({ from, to, value });
-    this.edges.set(from, edges);
-    const revEdges = this.revEdges.get(to) ?? [];
-    revEdges.push({ from, to, value });
-    this.revEdges.set(to, revEdges);
-    this.handlers.forEach((h) => h(from, to, value, this));
-  }
-
-  /**
-   * 指定されたNodeの親と子を返す
-   * 一度もaddで参照されたことがないNodeの場合、undefinedを返す
-   * @param from
-   */
-  public get(from: NodeID):
-    | {
-        parent: Edge<T>[];
-        children: Edge<T>[];
-      }
-    | undefined {
-    const p = this.revEdges.get(from);
-    const c = this.edges.get(from);
-    if (p === undefined && c === undefined) {
-      return undefined;
-    }
-    return { parent: p ?? [], children: c ?? [] };
-  }
-
-  public getValue(from: NodeID, to: NodeID): T {
-    const edges = this.edges.get(from) ?? [];
-    const edge = edges.find((e) => e.to === to);
-    if (!edge) {
-      throw new Error(`edge not found: ${from} -> ${to}`);
-    }
-    return edge.value;
-  }
-
-  public serialize() {
-    const parent = [...this.revEdges.entries()].map(([to, edges]) => {
-      return [to, edges.map((e) => [e.from, e.value])];
-    });
-    const children = [...this.edges.entries()].map(([from, edges]) => {
-      return [from, edges.map((e) => [e.to, e.value])];
-    });
-    return { parent, children };
-  }
-}
-
 export type CostFunction<Node, EdgeValue> = (
   edge: Edge<EdgeValue>,
   context: DAG<Node, EdgeValue>,
@@ -211,7 +148,7 @@ type NodeHandler<T> = (id: NodeID, node: T, self: Nodes<T>) => void;
 
 export class DAG<Node, EdgeValue> {
   public nodes: Nodes<Node>;
-  public edges: Edges<EdgeValue> = new Edges();
+  public edges: WaveletEdges<EdgeValue> = new WaveletEdges();
   public nodeSet = new Set<NodeID>();
   private nodeHandlers: NodeHandler<Node>[];
   public addNodeHandler(handler: NodeHandler<Node>) {
