@@ -5,3 +5,5 @@ export * from "./heap";
 export * from "./priority-queue";
 export * from "./string";
 export * from "./values";
+export * from "./wavelet-matrix-edges";
+export * from "./succinct-bit-vector";
