@@ -9,6 +9,6 @@
     "op:inject": "npm run op:inject --workspaces"
   },
   "devDependencies": {
-    "express": "^4.19.2"
+    "express": "^5.0.0"
   }
 }
