@@ -21,7 +21,7 @@ jobs:
       # Setup .npmrc file to publish to npm
       - uses: actions/setup-node@v7
         with:
-          node-version: '18.x'
+          node-version: '24.x'
           registry-url: 'https://registry.npmjs.org'
       - run: npm ci
       - run: npm run build -w pkgs/lib
